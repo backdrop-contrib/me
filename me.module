@@ -1,0 +1,68 @@
+<?php
+
+/**
+ * Implementation of hook_help().
+ */
+function me_help($section) {
+  switch ($section) {
+    case 'admin/modules#description':
+      return t('Provides links to current user\'s pages using \'me\' instead of user id.');
+  }
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function me_menu($may_cache) {
+  $items=array();
+
+  if ($may_cache) {
+    $aliases = explode("\n",variable_get('me_aliases','user/me'));
+    foreach($aliases as $alias) {
+      $alias = preg_split('/[\?\#]/',$alias);
+      $alias = trim(check_url($alias[0]),"/ \t\n\r\0");
+      if(preg_match('/(\/m|^m)(e$|e\/)/',$alias,$matches)>0){
+        $items[] = array(
+          'path' => $alias,
+          'type' => MENU_CALLBACK,
+          'callback' => 'me_relay'
+        );
+      }
+    }
+  }
+
+  return $items;
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function me_settings() {
+  $form['me_aliases'] = array(
+    '#type'=>'textarea',
+    '#title'=>t('Aliases to create'),
+    '#default_value'=>variable_get('me_aliases',"user/me"),
+    '#cols'=>50,
+    '#rows'=>6 ,
+    '#description'=>t('The per-user aliases to create. Each alias must contain the \'me\' fragment or it will be ignored. Enter one alias per line, and do not include trailing or leading slashes.'),
+  );
+
+  return $form;
+}
+
+/**
+ * Forward to same url with proper uid this time.
+ */
+function me_relay() {
+  global $user;
+
+  $index = 0;
+  $dest = '';
+  $fragment = arg(0);
+  while($fragment) {
+    $dest.=(($dest=='')?'':'/').(($fragment=='me')?$user->uid:$fragment);
+    $index++;
+    $fragment = arg($index);
+  }
+  drupal_goto($dest);
+}
