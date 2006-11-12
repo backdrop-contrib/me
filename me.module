@@ -20,6 +20,8 @@ function me_menu($may_cache) {
   if ($may_cache) {
     $aliases = explode("\n",variable_get('me_aliases','user/me'));
     foreach($aliases as $alias) {
+      // check to see if there's a 'me' to replace;
+      // either '.../me/...', 'me/...' or '.../me' but eg 'readme/...' does not count
       $alias = preg_split('/[\?\#]/',$alias);
       $alias = trim(check_url($alias[0]),"/ \t\n\r\0");
       if(preg_match('/(\/m|^m)(e$|e\/)/',$alias,$matches)>0){
@@ -36,7 +38,9 @@ function me_menu($may_cache) {
 }
 
 /**
- * Implementation of hook_menu().
+ * Implementation of hook_settings().
+ *
+ * Provide a single textbox that allows admins to enter any number of paths containing 'me'
  */
 function me_settings() {
   $form['me_aliases'] = array(
@@ -53,6 +57,9 @@ function me_settings() {
 
 /**
  * Forward to same url with proper uid this time.
+ *
+ * The paths have already been checked to contain 'me' in the _menu hook.
+ * We don't have to check node access, drupal_goto will take care of that.
  */
 function me_relay() {
   global $user;
