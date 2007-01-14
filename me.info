@@ -1,0 +1,2 @@
+name = 'me' Aliases
+description = Provides links to current user's pages using 'me' instead of the numerical user id.
