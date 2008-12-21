@@ -2,76 +2,212 @@
 // $Id$
 
 /**
+ * @file
+ *
+ * Provides 'me' aliases to allow users to enter 'me' in common paths instead
+ * of their user id.
+ */
+
+/**
+ * Implementation of hook_help().
+ */
+function me_help($path, $arg) {
+  switch ($path) {
+    case 'admin/help#me':
+      return t('Allows a user to enter user/me, blog/me etc.. using \'me\' in place of their user id.');
+  }
+}
+
+/**
+ * Implementation of hook_menu_alter().
+ */
+function me_menu_alter(&$callbacks) {
+  // Loop over each of the paths, finding all %user* loaders,
+  // and replace them with a %me equivelant. This should catch
+  // all drupal modules that use the %user loader to load up
+  // user objects, which should be most well written D6 modules.
+  foreach ($callbacks as $path => $data) {
+    if (FALSE !== strpos($path, '%user')) {
+      $new_path = str_replace('%user', '%me', $path);
+
+      // We need to make sure that the correct files are loaded up. when the path
+      // is used.
+      if (isset($data['file']) && !isset($data['file path'])) {
+        $data['file path'] = drupal_get_path('module', $data['module']);
+      }
+
+      $callbacks[$new_path] = $data;
+      unset($callbacks[$path]);
+    }
+  }
+}
+
+/**
+ * Menu load callback in place of user_load().
+ */
+function me_load($uid) {
+  return user_load(_me_check_arg($uid));
+}
+
+/**
+ * Menu to_arg function for %me.
+ */
+function me_to_arg($arg) {
+  return me_uid_optional_to_arg($arg);
+}
+
+/**
+ * Menu load callback in place of user_uid_optional_load().
+ */
+function me_uid_optional_load($uid) {
+  return user_uid_optional_load(_me_check_arg($uid));
+}
+
+/**
+ * Menu to_arg callback in place of user_uid_optional_to_arg().
+ */
+function me_uid_optional_to_arg($arg) {
+  return ($uid = user_uid_optional_to_arg($arg)) == $GLOBALS['user']->uid ? variable_get('me_alias', 'me') : $uid;
+}
+
+/**
+ * Menu load callback in place of user_category_load().
+ */
+function me_category_load($uid, &$map, $index) {
+  return user_category_load(_me_check_arg($uid), $map, $index);
+}
+
+/**
+ * Menu to_arg function for %me_category.
+ */
+function me_category_to_arg($arg) {
+  return me_uid_optional_to_arg($arg);
+}
+
+/**
+ * A Helper function to check for the 'me' alias.
+ *
+ * @param $arg
+ *   The argument to check
+ *
+ * @return int
+ *   The current user id if a match is found, or the given argument
+ *   if no match.
+ */
+function _me_check_arg($arg) {
+  $compare_function = variable_get('me_case_insensitive', FALSE) ? 'strcasecmp' : 'strcmp';
+  if ($compare_function($arg, variable_get('me_alias', 'me')) === 0) {
+    return $GLOBALS['user']->uid;
+  }
+  return $arg;
+}
+
+/**
+ * Implementation of hook_views_api().
+ */
+function me_views_api() {
+  return array(
+    'api' => views_api_version(),
+  );
+}
+
+/**
  * Implementation of hook_menu().
  */
-function me_menu($may_cache) {
-  $items=array();
+function me_menu() {
+  $items = array();
 
-  if ($may_cache) {
-    $aliases = explode("\n",variable_get('me_aliases','user/me'));
-    foreach($aliases as $alias) {
-      // check to see if there's a 'me' to replace;
-      // either '.../me/...', 'me/...' or '.../me' but eg 'readme/...' does not count
-      $alias = preg_split('/[\?\#]/',$alias);
-      $alias = trim(check_url($alias[0]),"/ \t\n\r\0");
-      if(preg_match('/(\/m|^m)(e$|e\/)/',$alias,$matches)>0){
-        $items[] = array(
-          'path' => $alias,
-          'type' => MENU_CALLBACK,
-          'callback' => 'me_relay',
-          'access' => true, // we're handing over access control to the destiation page
-        );
-      }
-    }
+  $items['admin/settings/me'] = array(
+    'title' => "'Me' Alias",
+    'description' => "Configure the 'me' alias, and how it is matched.",
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('me_admin_settings_form'),
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_NORMAL_ITEM,
+  );
 
-    $items[] = array(
-      'path' => 'admin/settings/me',
-      'title' => t('\'me\' Aliases'),
-      'description' => t('Define URL paths for Me aliasing.'),
-      'callback' => 'drupal_get_form',
-      'callback arguments' => array('me_settings'),
-      'access' => user_access('administer site configuration'),
-      'type' => MENU_NORMAL_ITEM, // optional
-    );
-  }
+  // TODO: Remove when/if http://drupal.org/node/109588 gets in.
+  // Loop over each of the paths, finding all %user* loaders,
+  // and replace them with a %me equivelant. This should catch
+  // all drupal modules that use the %user loader to load up
+  // user objects, which should be most well written D6 modules.
+  $items['user/'. variable_get('me_alias', 'me') .'/edit'] = array(
+    'title' => 'Edit',
+    'page callback' => 'me_user_edit',
+    'access callback' => 'me_user_edit_access',
+    'type' => MENU_LOCAL_TASK,
+  );
 
   return $items;
 }
 
 /**
- * Implementation of hook_settings().
+ * Menu callback to redirect to the user edit pages with the correct
+ * user id.
  *
- * Provide a single textbox that allows admins to enter any number of paths containing 'me'
+ * TODO: Remove when/if http://drupal.org/node/109588 gets in.
  */
-function me_settings() {
-  $form['me_aliases'] = array(
-    '#type'=>'textarea',
-    '#title'=>t('Aliases to create'),
-    '#default_value'=>variable_get('me_aliases',"user/me"),
-    '#cols'=>50,
-    '#rows'=>6 ,
-    '#description'=>t('The per-user aliases to create. Each alias must contain the \'me\' fragment or it will be ignored. Enter one alias per line, and do not include trailing or leading slashes.'),
+function me_user_edit() {
+  drupal_goto('user/'. $GLOBALS['user']->uid .'/edit');
+}
+
+/**
+ * Menu access callback to check access before user edit redirection
+ * takes place. This keeps 'me' in the path when access will be denied
+ * anyway, and saves an extra request.
+ *
+ * TODO: Remove when/if http://drupal.org/node/109588 gets in.
+ */
+function me_user_edit_access() {
+  return user_edit_access($GLOBALS['user']);
+}
+
+/**
+ * Form callback for the admin settings form.
+ */
+function me_admin_settings_form(&$form_state) {
+  $form = array();
+
+  $form['me_alias'] = array(
+    '#type' => 'textfield',
+    '#title' => t("'Me' Alias"),
+    '#description' => t('The alias to use to represent the current users uid.'),
+    '#default_value' => variable_get('me_alias', 'me'),
+    '#required' => TRUE,
   );
+
+  $form['me_case_insensitive'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Case Insensitive Alias Checking'),
+    '#description' => t('When checked, "Me" will be matched the same as "me", "ME", and "mE".'),
+    '#default_value' => variable_get('me_case_insensitive', FALSE),
+    '#required' => TRUE,
+  );
+
+  $form['#validate'] = array('me_admin_settings_form_validate');
+
+  // TODO: Remove submit callback when/if http://drupal.org/node/109588 gets in.
+  $form['#submit'] = array('me_admin_settings_form_submit');
 
   return system_settings_form($form);
 }
 
 /**
- * Forward to same url with proper uid this time.
- *
- * The paths have already been checked to contain 'me' in the _menu hook.
- * We don't have to check node access, drupal_goto will take care of that.
+ * Validation callback for me_admin_settings_form.
  */
-function me_relay() {
-  global $user;
-
-  $index = 0;
-  $dest = '';
-  $fragment = arg(0);
-  while($fragment) {
-    $dest.=(($dest=='')?'':'/').(($fragment=='me')?$user->uid:$fragment);
-    $index++;
-    $fragment = arg($index);
+function me_admin_settings_form_validate($form, &$form_state) {
+  if (preg_match('/[^a-zA-Z]/', $form_state['values']['me_alias'])) {
+    form_set_error('me_alias', t('The alias can only contain characters from a-z and A-Z.'));
   }
-  drupal_goto($dest);
+}
+
+/**
+ * SUbmit callback for me_admin_settings_form.
+ *
+ * TODO: Remove when/if http://drupal.org/node/109588 gets in.
+ */
+function me_admin_settings_form_submit($form, &$form_state) {
+  // When/if the me alias changes, we need to rebuild the menu so the
+  // new alias is picked up on the user edit pages correctly.
+  menu_rebuild();
 }
