@@ -4,8 +4,7 @@
 /**
  * @file
  *
- * Provides 'me' aliases to allow users to enter 'me' in common paths instead
- * of their user id.
+ * Provides 'me' aliases to allow users to enter 'me' in common paths instead of their user id.
  */
 
 /**
@@ -14,7 +13,7 @@
 function me_help($path, $arg) {
   switch ($path) {
     case 'admin/help#me':
-      return t('Allows a user to enter user/me, blog/me etc.. using \'me\' in place of their user id.');
+      return t("Allows a user to enter user/me, blog/me etc.. using 'me' in place of their user id.");
   }
 }
 
@@ -26,6 +25,7 @@ function me_menu_alter(&$callbacks) {
   // and replace them with a %me equivelant. This should catch
   // all drupal modules that use the %user loader to load up
   // user objects, which should be most well written D6 modules.
+  // Certainly all of core.
   foreach ($callbacks as $path => $data) {
     if (FALSE !== strpos($path, '%user')) {
       $new_path = str_replace('%user', '%me', $path);
@@ -90,16 +90,26 @@ function me_category_to_arg($arg) {
  * @param $arg
  *   The argument to check
  *
- * @return int
+ * @return mixed
  *   The current user id if a match is found, or the given argument
  *   if no match.
  */
 function _me_check_arg($arg) {
+  return _me_is_alias($arg) ? $GLOBALS['user']->uid : $arg;
+}
+
+/**
+ * A helper function to check if a string is equal to the 'me' alias.
+ *
+ * @param $arg
+ *   The argument to check.
+ *
+ * @return bool
+ *   TRUE if the argument given is a 'me' alias. FALSE otherwise.
+ */
+function _me_is_alias($arg) {
   $compare_function = variable_get('me_case_insensitive', FALSE) ? 'strcasecmp' : 'strcmp';
-  if ($compare_function($arg, variable_get('me_alias', 'me')) === 0) {
-    return $GLOBALS['user']->uid;
-  }
-  return $arg;
+  return $compare_function($arg, variable_get('me_alias', 'me')) === 0;
 }
 
 /**
@@ -108,6 +118,7 @@ function _me_check_arg($arg) {
 function me_views_api() {
   return array(
     'api' => views_api_version(),
+    'path' => drupal_get_path('module', 'me') . '/includes',
   );
 }
 
@@ -127,10 +138,6 @@ function me_menu() {
   );
 
   // TODO: Remove when/if http://drupal.org/node/109588 gets in.
-  // Loop over each of the paths, finding all %user* loaders,
-  // and replace them with a %me equivelant. This should catch
-  // all drupal modules that use the %user loader to load up
-  // user objects, which should be most well written D6 modules.
   $items['user/'. variable_get('me_alias', 'me') .'/edit'] = array(
     'title' => 'Edit',
     'page callback' => 'me_user_edit',
