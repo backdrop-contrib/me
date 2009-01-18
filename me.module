@@ -51,7 +51,8 @@ function me_preprocess_menu_item_link(&$vars) {
  */
 function me_theme_menu_item_link($link) {
   _me_check_path($link);
-  return call_user_func(me_variable_get('me_theme_menu_item_link_func'), $link);
+  $function = me_variable_get('me_theme_menu_item_link_func');
+  return $function($link);
 }
 
 /**
@@ -102,7 +103,7 @@ function me_variable_get($name) {
     'me_paths' => '',
     'me_redirect_anonymous' => '',
     'me_rewrite_link' => TRUE,
-    'me_theme_menu_item_link_func' => 'theme_menu_4item_link',
+    'me_theme_menu_item_link_func' => 'theme_menu_item_link',
     'me_user_override' => FALSE,
   );
 
