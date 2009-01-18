@@ -8,6 +8,18 @@
  */
 
 /**
+ * Constants defining the different ways paths can be matched.
+ */
+// Exclude paths
+define('ME_PATH_EXCLUDE', 0);
+
+// Include paths
+define('ME_PATH_INCLUDE', 1);
+
+// PHP for paths
+define('ME_PATH_PHP', 2);
+
+/**
  * Implementation of hook_help().
  */
 function me_help($path, $arg) {
@@ -15,6 +27,187 @@ function me_help($path, $arg) {
     case 'admin/help#me':
       return t("Allows a user to enter user/me, blog/me etc.. using 'me' in place of their user id.");
   }
+}
+
+/**
+ * Implementation of hook_theme_registry_alter().
+ */
+function me_theme_registry_alter(&$theme_registry) {
+  if (isset($theme_registry['menu_item_link']['function'])) {
+    variable_set('me_theme_menu_item_link_func', $theme_registry['menu_item_link']['function']);
+    $theme_registry['menu_item_link']['function'] = 'me_theme_menu_item_link';
+  }
+}
+
+/**
+ * Implementaiton of moduleName_preprocess_hook() for theme_user_list.
+ */
+function me_preprocess_menu_item_link(&$vars) {
+  _me_check_path($vars['link']);
+}
+
+/**
+ * Implementation of theme_menu_item_link().
+ */
+function me_theme_menu_item_link($link) {
+  _me_check_path($link);
+  return call_user_func(me_variable_get('me_theme_menu_item_link_func'), $link);
+}
+
+/**
+ * Helper function to check if a path can be rewritten or not.
+ *
+ * By this stage, the path is already rewritten, so we need to
+ * reverse the process.
+ *
+ * @param &$link
+ *   The link object to check.
+ */
+function _me_check_path(&$link) {
+  // If the link has been rewritten, and we are not supposed to be handling this
+  // path, then rewite it back to its original.
+  if (me_variable_get('me_rewrite_link') && !_me_handle_path($link['href'])) {
+    $path_parts = explode('/', $link['href'], MENU_MAX_PARTS);
+
+    // The wildcarded path will either be in $link['path'], or $link['router_path'].
+    $wild_parts = explode('/', (isset($link['path']) ? $link['path'] : $link['router_path']), MENU_MAX_PARTS);
+
+    // Go over each of the path parts and if one is equal to the me alias, make sure it is a wildcard,
+    // and if so, switch it back out.
+    while (list($key, $val) = each($path_parts)) {
+      if (_me_is_alias($val) && $wild_parts[$key] == '%') {
+        $path_parts[$key] = $GLOBALS['user']->uid;
+      }
+    }
+
+    $link['href'] = implode('/', $path_parts);
+  }
+}
+
+/**
+ * Helper function to keep all the variable gets in one place.
+ *
+ * @param $name
+ *   The variable we wish to retrieve.
+ *
+ * @return mixed
+ *   The value of the requested variable.
+ */
+function me_variable_get($name) {
+  static $defaults = array(
+    'me_alias' => 'me',
+    'me_case_insensitive' => FALSE,
+    'me_redirect' => FALSE,
+    'me_path_rule' => ME_PATH_EXCLUDE,
+    'me_paths' => '',
+    'me_redirect_anonymous' => '',
+    'me_rewrite_link' => TRUE,
+    'me_theme_menu_item_link_func' => 'theme_menu_4item_link',
+    'me_user_override' => FALSE,
+  );
+
+  return variable_get($name, $defaults[$name]);
+}
+
+/**
+ * Helper function to check if me should handle a given path.
+ *
+ * @param $path
+ *   The path to check
+ *
+ * @return boolean
+ *   TRUE if the path is handled by the me module. FALSE otherwise.
+ */
+function _me_handle_path($path) {
+  // Match path if necessary
+  $paths = me_variable_get('me_paths');
+  $path_rule = me_variable_get('me_path_rule');
+  $path_match = TRUE;
+
+  if (!empty($paths)) {
+    if ($path_rule !== ME_PATH_PHP) {
+      $path = drupal_get_path_alias($_GET['q']);
+
+      // Compare with the internal and path alias (if any).
+      $path_match = drupal_match_path($path, $paths);
+      if ($path != $_GET['q']) {
+        $path_match = $path_match || drupal_match_path($_GET['q'], $paths);
+      }
+
+      // When $path_rule has a value of ME_PATH_EXCLUDE, then me works on
+      // all paths except those listed in $paths. When set to ME_PATH_INCLUDE, it
+      // is used only on those pages listed in $paths.
+      $path_match = !($path_rule xor $path_match);
+    }
+    else {
+      $path_match = drupal_eval($paths);
+    }
+  }
+
+  return $path_match;
+}
+
+/**
+ * A special menu callback function that either redirects to
+ * a page with the uid in the path, or calls the real menu handler.
+ *
+ * @param $parts
+ *   The menu parts we are working with.
+ * @param $callback
+ *   The page callback to call.
+ * @param ...
+ *   count($parts) arguments for each part of the actual path
+ * @param ...
+ *   Any extra arguments will be the real page arguments.
+ *
+ * @return mixed
+ *   Whatever the real page callback returns.
+ */
+function me_handler($parts, $callback) {
+  // Get the arguments, and shift off $parts and $data.
+  $args = func_get_args();
+  array_shift($args);
+  array_shift($args);
+
+  // If we want the uid shown in the address bar, we need to do a redirect.
+  if (me_variable_get('me_redirect') || _me_user_disabled() || !_me_handle_path($_GET['q'])) {
+    $redirect = FALSE;
+    // Get the menu path arguments.
+    $menu_parts = explode('/', $_GET['q'], MENU_MAX_PARTS);
+
+    // Loop over each part. If it's a %me wildcard, then
+    // check the corresponding menu part for the me alias,
+    // if so, replace it out with the user id so we can redirect correctly.
+    // If no changes are required, then call the required function.
+    while (list($key, $val) = each($parts)) {
+      if (0 === strpos($val, '%me') && _me_is_alias($menu_parts[$key])) {
+        $redirect = TRUE;
+        $menu_parts[$key] = $GLOBALS['user']->uid;
+      }
+    }
+
+    if ($redirect) {
+      $path = implode('/', $menu_parts);
+      // Save on an extra redirect by also checking the anonymous redirect here.
+      $redirect_path = me_variable_get('me_redirect_anonymous');
+      if ($GLOBALS['user']->uid == 0 && !empty($redirect_path)) {
+        $path = $redirect_path;
+      }
+      drupal_goto($path);
+    }
+  }
+
+  return call_user_func_array($callback, $args);
+}
+
+/**
+ * Helper function to check if a user can have, and has me disabled.
+ *
+ * @return boolean
+ *   TRUE if the user has me disabled. FALSE otherwise.
+ */
+function _me_user_disabled() {
+  return me_variable_get('me_user_override') && !empty($GLOBALS['user']->me_disable);
 }
 
 /**
@@ -26,6 +219,7 @@ function me_menu_alter(&$callbacks) {
   // all drupal modules that use the %user loader to load up
   // user objects, which should be most well written D6 modules.
   // Certainly all of core.
+  $processed = array();
   foreach ($callbacks as $path => $data) {
     if (FALSE !== strpos($path, '%user')) {
       $new_path = str_replace('%user', '%me', $path);
@@ -36,8 +230,44 @@ function me_menu_alter(&$callbacks) {
         $data['file path'] = drupal_get_path('module', $data['module']);
       }
 
+      // We need to find the right pagae callback and page arguments to make
+      // the me handler work correctly.
+
+      // First, we need to find the parent.
+      $parts = explode('/', $path, MENU_MAX_PARTS);
+      $parent_path = implode('/', array_slice($parts, 0, count($parts) - 1));
+      if (in_array($parent_path, $processed)) {
+        $parts = explode('/', $new_path, MENU_MAX_PARTS);
+        $parent_path = implode('/', array_slice($parts, 0, count($parts) - 1));
+      }
+      $parent = $callbacks[$parent_path];
+
+      if (!isset($data['page callback']) && isset($parent['page callback'])) {
+        $data['page callback'] = $parent['page callback'];
+        if (!isset($data['page arguments']) && isset($parent['page arguments'])) {
+          $data['page arguments'] = $parent['page arguments'];
+        }
+        if (!isset($data['file']) && isset($parent['file'])) {
+          $data['file'] = $parent['file'];
+        }
+        if (!isset($data['file path']) && isset($parent['file path'])) {
+          $data['file path'] = $parent['file path'];
+        }
+      }
+
+      if (isset($data['page callback'])) {
+        if (!is_array($data['page arguments'])) {
+          $data['page arguments'] = array();
+        }
+
+        $parts = explode('/', $new_path, MENU_MAX_PARTS);
+        $data['page arguments'] = array_merge(array($parts, $data['page callback']), $data['page arguments']);
+        $data['page callback'] = 'me_handler';
+      }
+
       $callbacks[$new_path] = $data;
       unset($callbacks[$path]);
+      $processed[] = $path;
     }
   }
 }
@@ -52,8 +282,8 @@ function me_load($uid) {
 /**
  * Menu to_arg function for %me.
  */
-function me_to_arg($arg) {
-  return me_uid_optional_to_arg($arg);
+function me_to_arg($arg, $map, $index) {
+  return me_uid_optional_to_arg($arg, $map, $index);
 }
 
 /**
@@ -66,8 +296,14 @@ function me_uid_optional_load($uid) {
 /**
  * Menu to_arg callback in place of user_uid_optional_to_arg().
  */
-function me_uid_optional_to_arg($arg) {
-  return ($uid = user_uid_optional_to_arg($arg)) == $GLOBALS['user']->uid ? variable_get('me_alias', 'me') : $uid;
+function me_uid_optional_to_arg($arg, $map, $index) {
+  $uid = user_uid_optional_to_arg($arg, $map, $index);
+  if (me_variable_get('me_rewrite_link') && !_me_user_disabled()) {
+    return $uid == $GLOBALS['user']->uid ? me_variable_get('me_alias') : $uid;
+  }
+  else {
+    return $uid;
+  }
 }
 
 /**
@@ -80,22 +316,31 @@ function me_category_load($uid, &$map, $index) {
 /**
  * Menu to_arg function for %me_category.
  */
-function me_category_to_arg($arg) {
-  return me_uid_optional_to_arg($arg);
+function me_category_to_arg($arg, $map, $index) {
+  return me_uid_optional_to_arg($arg, $map, $index);
 }
 
 /**
  * A Helper function to check for the 'me' alias.
  *
  * @param $arg
- *   The argument to check
+ *   The argument to check.
+ * @param $redirect
+ *   When TRUE, anonymous users will be redirected if a path is available.
  *
  * @return mixed
  *   The current user id if a match is found, or the given argument
  *   if no match.
  */
-function _me_check_arg($arg) {
-  return _me_is_alias($arg) ? $GLOBALS['user']->uid : $arg;
+function _me_check_arg($arg, $redirect = TRUE) {
+  $return = _me_is_alias($arg) ? $GLOBALS['user']->uid : $arg;
+
+  $redirect_path = me_variable_get('me_redirect_anonymous');
+  if ($redirect && $return == 0 &&  !empty($redirect_path)) {
+    drupal_goto($redirect_path);
+  }
+
+  return $return;
 }
 
 /**
@@ -104,12 +349,12 @@ function _me_check_arg($arg) {
  * @param $arg
  *   The argument to check.
  *
- * @return bool
+ * @return boolean
  *   TRUE if the argument given is a 'me' alias. FALSE otherwise.
  */
 function _me_is_alias($arg) {
-  $compare_function = variable_get('me_case_insensitive', FALSE) ? 'strcasecmp' : 'strcmp';
-  return $compare_function($arg, variable_get('me_alias', 'me')) === 0;
+  $compare_function = me_variable_get('me_case_insensitive') ? 'strcasecmp' : 'strcmp';
+  return $compare_function($arg, me_variable_get('me_alias')) === 0;
 }
 
 /**
@@ -118,7 +363,7 @@ function _me_is_alias($arg) {
 function me_views_api() {
   return array(
     'api' => views_api_version(),
-    'path' => drupal_get_path('module', 'me') . '/includes',
+    'path' => drupal_get_path('module', 'me') .'/includes',
   );
 }
 
@@ -129,8 +374,8 @@ function me_menu() {
   $items = array();
 
   $items['admin/settings/me'] = array(
-    'title' => "'Me' Alias",
-    'description' => "Configure the 'me' alias, and how it is matched.",
+    'title' => "'Me' Aliases",
+    'description' => "Configure the 'me' aliases, and how they're matched.",
     'page callback' => 'drupal_get_form',
     'page arguments' => array('me_admin_settings_form'),
     'access arguments' => array('administer site configuration'),
@@ -138,12 +383,15 @@ function me_menu() {
   );
 
   // TODO: Remove when/if http://drupal.org/node/109588 gets in.
-  $items['user/'. variable_get('me_alias', 'me') .'/edit'] = array(
-    'title' => 'Edit',
-    'page callback' => 'me_user_edit',
-    'access callback' => 'me_user_edit_access',
-    'type' => MENU_LOCAL_TASK,
-  );
+  // We don't need this here if we are doing redirects.
+  if (!me_variable_get('me_redirect')) {
+    $items['user/'. me_variable_get('me_alias') .'/edit'] = array(
+      'title' => 'Edit',
+      'page callback' => 'me_user_edit',
+      'access callback' => 'me_user_edit_access',
+      'type' => MENU_LOCAL_TASK,
+    );
+  }
 
   return $items;
 }
@@ -170,6 +418,15 @@ function me_user_edit_access() {
 }
 
 /**
+ * Implementation of hook_perm().
+ */
+function me_perm() {
+  return array(
+    'use PHP for me alias paths',
+  );
+}
+
+/**
  * Form callback for the admin settings form.
  */
 function me_admin_settings_form(&$form_state) {
@@ -179,7 +436,7 @@ function me_admin_settings_form(&$form_state) {
     '#type' => 'textfield',
     '#title' => t("'Me' Alias"),
     '#description' => t('The alias to use to represent the current users uid.'),
-    '#default_value' => variable_get('me_alias', 'me'),
+    '#default_value' => me_variable_get('me_alias'),
     '#required' => TRUE,
   );
 
@@ -187,16 +444,87 @@ function me_admin_settings_form(&$form_state) {
     '#type' => 'checkbox',
     '#title' => t('Case Insensitive Alias Checking'),
     '#description' => t('When checked, "Me" will be matched the same as "me", "ME", and "mE".'),
-    '#default_value' => variable_get('me_case_insensitive', FALSE),
-    '#required' => TRUE,
+    '#default_value' => me_variable_get('me_case_insensitive'),
   );
+
+  $form['me_rewrite_link'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Rewrite links generated by the drupal menu system'),
+    '#description' => t('When checked, links output by the drupal menu system will replace uid with the me alias.'),
+    '#default_value' => me_variable_get('me_rewrite_link'),
+  );
+
+  $form['me_user_override'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Allow users to turn off me for their account'),
+    '#default_value' => me_variable_get('me_user_override'),
+  );
+
+  $form['me_redirect'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Redirect to uid'),
+    '#description' => t('When checked, perform a redirect so the users uid is shown in the address bar instead of the me alias.'),
+    '#default_value' => me_variable_get('me_redirect'),
+
+  );
+
+  $form['me_redirect_anonymous'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Redirect anonymous users'),
+    '#description' => t('When this is non-empty, anonymous users will be redirected to the specified drupal path.'),
+    '#default_value' => me_variable_get('me_redirect_anonymous'),
+  );
+
+  $access = user_access('use PHP for me alias paths');
+  $path_rule = me_variable_get('me_path_rule');
+  $paths = me_variable_get('me_paths');
+
+  if ($path_rule == ME_PATH_PHP && !$access) {
+    $form['me_paths_settings'] = array();
+    $form['me_paths_settings']['me_path_rule'] = array('#type' => 'value', '#value' => $path_rule);
+    $form['me_paths_settings']['me_paths'] = array('#type' => 'value', '#value' => $paths);
+  }
+  else {
+    $options = array(
+      ME_PATH_EXCLUDE => t('Use me alias on every path except the listed paths.'),
+      ME_PATH_INCLUDE => t('Use me alias only on the listed paths.'),
+    );
+    $description = t("Enter one path per line as Drupal paths. The '*' character is a wildcard. Example paths are %blog for the '
+      .'blog page and %blog-wildcard for every personal blog. %front is the front page.",
+      array('%blog' => 'blog', '%blog-wildcard' => 'blog/*', '%front' => '<front>'));
+
+    if ($access) {
+      $options[ME_PATH_PHP] = t('Use me alias if the following PHP code returns <code>TRUE</code> (PHP-mode, experts only).');
+      $description .= ' '. t('If the PHP-mode is chosen, enter PHP code between %php. Note that executing incorrect PHP-code can '
+        .'break your Drupal site.', array('%php' => '<?php ?>'));
+    }
+    $form['me_paths_settings']['me_path_rule'] = array(
+      '#type' => 'radios',
+      '#title' => t('Use me alias on specific paths'),
+      '#options' => $options,
+      '#default_value' => $path_rule,
+    );
+    $form['me_paths_settings']['me_paths'] = array(
+      '#type' => 'textarea',
+      '#title' => t('Paths'),
+      '#default_value' => $paths,
+      '#description' => $description . t('<p>NOTE: This option simply ensures that the browser address bar for these paths have '
+        .'the uid and not me. The me alias will still work for these paths. It will have no effect on specific uids in paths, '
+        .'but if the path includes the me alias, then me will be affected for those paths. This will only affect paths '
+        .'that me can already handle. It will not allow me to work for unknown paths.</p>'),
+    );
+  }
 
   $form['#validate'] = array('me_admin_settings_form_validate');
 
-  // TODO: Remove submit callback when/if http://drupal.org/node/109588 gets in.
-  $form['#submit'] = array('me_admin_settings_form_submit');
+  $form = system_settings_form($form);
 
-  return system_settings_form($form);
+  // Quite a few options only have an affect on theme and menu rebuilds. We just do them here
+  // to make sure the options have an instant effect.
+  $form['#submit'][] = 'menu_rebuild';
+  $form['#submit'][] = 'drupal_rebuild_theme_registry';
+
+  return $form;
 }
 
 /**
@@ -209,12 +537,54 @@ function me_admin_settings_form_validate($form, &$form_state) {
 }
 
 /**
- * SUbmit callback for me_admin_settings_form.
- *
- * TODO: Remove when/if http://drupal.org/node/109588 gets in.
+ * Implementation of hook_user().
  */
-function me_admin_settings_form_submit($form, &$form_state) {
-  // When/if the me alias changes, we need to rebuild the menu so the
-  // new alias is picked up on the user edit pages correctly.
-  menu_rebuild();
+function me_user($op, &$edit, &$account, $category = NULL) {
+  switch ($op) {
+    case 'categories':
+      if (me_variable_get('me_user_override')) {
+        return array(
+          array(
+            'name' => 'me',
+            'title' => t("'@me' alias", array('@me' => me_variable_get('me_alias'))),
+            'weight' => 2,
+          ),
+        );
+      }
+      break;
+    case 'form' && $category == 'me':
+      $form = array();
+
+      $form['me_uid'] = array(
+        '#type' => 'item',
+        '#title' => t('User id'),
+        '#value' => $account->uid,
+      );
+
+      $form['me_disable'] = array(
+        '#type' => 'checkbox',
+        '#title' => t("Disable '%me' alias for this account", array('%me' => me_variable_get('me_alias'))),
+        '#description' => t('This option stops your user id from being replaced with %me. %me will still work when entered '
+          .'into the address bar, but you will be redirected to a page with your uid in its place.',
+          array('%me' => me_variable_get('me_alias'))),
+        '#default_value' => !empty($account->me_disable),
+      );
+
+      return $form;
+    case 'view':
+      if (me_variable_get('me_user_override')) {
+        $enabled = 'enabled';
+        if (!empty($account->me_disable)) {
+          $enabled = 'disabled';
+        }
+
+        $account->content['me'] = array(
+          '#type' => 'markup',
+          '#value' => t("'%me' aliases are $enabled for this account. Account user id is '@uid'.",
+            array('%me' => me_variable_get('me_alias'), '@uid' => $account->uid)),
+          '#weight' => 10,
+        );
+      }
+      break;
+  }
 }

@@ -44,7 +44,8 @@ class me_views_handler_argument_user_uid extends views_handler_argument_user_uid
     $form['me_alias'] = array(
       '#type' => 'checkbox',
       '#title' => t("Let users enter the 'me' alias instead of their user id."),
-      '#description' => t("If selected, users can enter the 'me' alias inplace of their user id. When this option is selected, the wildcard can not be the same as the 'me' alias."),
+      '#description' => t("If selected, users can enter the 'me' alias inplace of their user id. When this option is selected, '
+        .'the wildcard can not be the same as the 'me' alias."),
       '#default_value' => !empty($this->options['me_alias']),
     );
   }
@@ -92,7 +93,7 @@ class me_views_handler_argument_user_uid extends views_handler_argument_user_uid
       // The alias could potentially show up more than once. Loop over each argument
       // and check to be sure.
       foreach ($uid_args as &$uid_arg) {
-        $uid_arg = _me_check_arg($uid_arg);
+        $uid_arg = _me_check_arg($uid_arg, FALSE);
       }
 
       $arg = implode($seperator, $uid_args);

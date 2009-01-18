@@ -21,7 +21,7 @@ function me_views_data_alter(&$cache) {
 function me_views_handlers() {
   return array(
     'info' => array(
-      'path' => drupal_get_path('module', 'me') . '/includes',
+      'path' => drupal_get_path('module', 'me') .'/includes',
     ),
     'handlers' => array(
       'me_views_handler_argument_user_uid' => array(

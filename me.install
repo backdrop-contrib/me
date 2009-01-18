@@ -1,4 +1,5 @@
 <?php
+// $Id$
 
 /**
  * @file
@@ -13,6 +14,13 @@ function me_uninstall() {
   $vars = array(
     'me_alias',
     'me_case_insensitive',
+    'me_redirect',
+    'me_path_rule',
+    'me_paths',
+    'me_redirect_anonymous',
+    'me_rewrite_link',
+    'me_theme_menu_item_link_func',
+    'me_user_override',
   );
 
   foreach ($vars as $var) {
