@@ -221,10 +221,20 @@ function me_menu_alter(&$callbacks) {
   // user objects, which should be most well written D6 modules.
   // Certainly all of core.
   $processed = array();
+  $handlers = array('%user', '%user_uid_optional', '%user_category');
   foreach ($callbacks as $path => $data) {
-    if (FALSE !== strpos($path, '%user')) {
-      $new_path = str_replace('%user', '%me', $path);
+    //XXX: For now, we only handle known user loaders. I might make a module hook, or a configuration
+    // area to allow these to be exteneded if users make the requests.
+    $found = FALSE;
+    $parts = explode('/', $path, MENU_MAX_PARTS);
+    foreach ($handlers as $handler) {
+      if (in_array($handler, $parts)) {
+        $found = TRUE;
+        break;
+      }
+    }
 
+    if ($found) {
       // We need to make sure that the correct files are loaded up. when the path
       // is used.
       if (isset($data['file']) && !isset($data['file path'])) {
@@ -233,9 +243,34 @@ function me_menu_alter(&$callbacks) {
 
       // We need to find the right pagae callback and page arguments to make
       // the me handler work correctly.
+      $new_parts = array();
+
+      // The only load argument that needs to be passed by reference is map.
+      // We make sure that we have map in the right place to be passed by reference.
+      if (!is_array($data['load arguments'])) {
+        $data['load arguments'] = array();
+      }
+
+      $load_arguments = array();
+      while (list($key, $val) = each($parts)) {
+        if (in_array($val, $handlers)) {
+          $load_arguments[$key] = str_replace('%', '', $val) .'_load';
+          $val = '%me';
+        }
+        $new_parts[] = $val;
+      }
+      $new_path = implode('/', $new_parts);
+
+      // Find the current map index, and add our load arguments, putting map
+      // in the place we expect it to be.
+      if (FALSE !== ($map_index = array_search('%map', $data['load arguments']))) {
+        unset($data['load arguments'][$map_index]);
+        $map_index = strval($map_index);
+      }
+
+      array_unshift($data['load arguments'], $load_arguments, '%map', '%index', $map_index);
 
       // First, we need to find the parent.
-      $parts = explode('/', $path, MENU_MAX_PARTS);
       $parent_path = implode('/', array_slice($parts, 0, count($parts) - 1));
       if (in_array($parent_path, $processed)) {
         $parts = explode('/', $new_path, MENU_MAX_PARTS);
@@ -276,28 +311,34 @@ function me_menu_alter(&$callbacks) {
 /**
  * Menu load callback in place of user_load().
  */
-function me_load($uid) {
-  return user_load(_me_check_arg($uid));
+function me_load($uid, $arguments, &$map, $index, $map_index = FALSE) {
+  // We need to get all the arguments, remove our custom ones,
+  // put %map in the right place, then call the menu load callack.
+  $args = func_get_args();
+  array_splice($args, 0, min(5, count($args)));
+
+  if (FALSE !== $map_index) {
+    $insert = array(
+      &$map,
+    );
+    array_splice($args, $map_index, 0, $insert);
+    $map[$index] = _me_check_arg($uid);
+  }
+
+  array_unshift($args, _me_check_arg($uid));
+
+  // If we have a valid function to call, call it.
+  if (isset($arguments[$index]) && function_exists($arguments[$index])) {
+    return call_user_func_array($arguments[$index], $args);
+  }
+
+  return FALSE;
 }
 
 /**
  * Menu to_arg function for %me.
  */
 function me_to_arg($arg, $map, $index) {
-  return me_uid_optional_to_arg($arg, $map, $index);
-}
-
-/**
- * Menu load callback in place of user_uid_optional_load().
- */
-function me_uid_optional_load($uid) {
-  return user_uid_optional_load(_me_check_arg($uid));
-}
-
-/**
- * Menu to_arg callback in place of user_uid_optional_to_arg().
- */
-function me_uid_optional_to_arg($arg, $map, $index) {
   $uid = user_uid_optional_to_arg($arg, $map, $index);
   if (me_variable_get('me_rewrite_link') && !_me_user_disabled()) {
     return $uid == $GLOBALS['user']->uid ? me_variable_get('me_alias') : $uid;
@@ -305,20 +346,6 @@ function me_uid_optional_to_arg($arg, $map, $index) {
   else {
     return $uid;
   }
-}
-
-/**
- * Menu load callback in place of user_category_load().
- */
-function me_category_load($uid, &$map, $index) {
-  return user_category_load(_me_check_arg($uid), $map, $index);
-}
-
-/**
- * Menu to_arg function for %me_category.
- */
-function me_category_to_arg($arg, $map, $index) {
-  return me_uid_optional_to_arg($arg, $map, $index);
 }
 
 /**
