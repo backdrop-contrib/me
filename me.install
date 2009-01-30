@@ -27,3 +27,16 @@ function me_uninstall() {
     variable_del($var);
   }
 }
+
+/**
+ * hook_update function to rebuild the menu so users upgrading don't get crictical errors.
+ */
+function me_update_6001() {
+  $ret = array();
+
+  menu_rebuild();
+
+  $ret[] = array('success' => TRUE, 'query' => 'The menu has been rebuilt.');
+
+  return $ret;
+}

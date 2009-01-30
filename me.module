@@ -221,10 +221,10 @@ function me_menu_alter(&$callbacks) {
   // user objects, which should be most well written D6 modules.
   // Certainly all of core.
   $processed = array();
+  //XXX: For now, we only handle known user loaders. I might make a module hook, or a configuration
+  // area to allow these to be exteneded if users make the requests.
   $handlers = array('%user', '%user_uid_optional', '%user_category');
   foreach ($callbacks as $path => $data) {
-    //XXX: For now, we only handle known user loaders. I might make a module hook, or a configuration
-    // area to allow these to be exteneded if users make the requests.
     $found = FALSE;
     $parts = explode('/', $path, MENU_MAX_PARTS);
     foreach ($handlers as $handler) {
@@ -241,7 +241,7 @@ function me_menu_alter(&$callbacks) {
         $data['file path'] = drupal_get_path('module', $data['module']);
       }
 
-      // We need to find the right pagae callback and page arguments to make
+      // We need to find the right page callback and page arguments to make
       // the me handler work correctly.
       $new_parts = array();
 
