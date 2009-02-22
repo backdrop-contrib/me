@@ -29,7 +29,7 @@ function me_uninstall() {
 }
 
 /**
- * hook_update function to rebuild the menu so users upgrading don't get crictical errors.
+ * Implementation of hook_update_N() to rebuild the menu so users upgrading don't get crictical errors.
  */
 function me_update_6001() {
   $ret = array();
@@ -37,6 +37,19 @@ function me_update_6001() {
   menu_rebuild();
 
   $ret[] = array('success' => TRUE, 'query' => 'The menu has been rebuilt.');
+
+  return $ret;
+}
+
+/**
+ * Implementation of hook_update_N() to increase the weight of me
+ * to make sure other modules can use the %user wildcards as they expect
+ * them to be.
+ */
+function me_update_6002() {
+  $ret = array();
+
+  $ret[] = update_sql("UPDATE {system} SET weight = 999 WHERE name = 'me'");
 
   return $ret;
 }

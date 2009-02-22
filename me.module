@@ -40,7 +40,7 @@ function me_theme_registry_alter(&$theme_registry) {
 }
 
 /**
- * Implementaiton of moduleName_preprocess_hook() for theme_user_list.
+ * Implementaiton of moduleName_preprocess_hook() for theme_menu_item_link.
  */
 function me_preprocess_menu_item_link(&$vars) {
   _me_check_path($vars['link']);
@@ -165,7 +165,7 @@ function _me_handle_path($path) {
  *   Whatever the real page callback returns.
  */
 function me_handler($parts, $callback) {
-  // Get the arguments, and shift off $parts and $data.
+  // Get the arguments, and shift off $parts and $callback.
   $args = func_get_args();
   array_shift($args);
   array_shift($args);
