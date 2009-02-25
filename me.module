@@ -223,20 +223,23 @@ function me_menu_alter(&$callbacks) {
   $processed = array();
   //XXX: For now, we only handle known user loaders. I might make a module hook, or a configuration
   // area to allow these to be exteneded if users make the requests.
-  $handlers = array('%user', '%user_uid_optional', '%user_category');
+  $handlers = array(
+    '%user' => '%me',
+    '%user_uid_optional' => '%me_uid_optional',
+    '%user_category' => '%me_category',
+  );
   foreach ($callbacks as $path => $data) {
     $found = FALSE;
     $parts = explode('/', $path, MENU_MAX_PARTS);
-    foreach ($handlers as $handler) {
-      if (in_array($handler, $parts)) {
+    foreach ($handlers as $user_handler => $me_handler) {
+      if (in_array($user_handler, $parts)) {
         $found = TRUE;
         break;
       }
     }
 
     if ($found) {
-      // We need to make sure that the correct files are loaded up. when the path
-      // is used.
+      // We need to make sure that the correct files are loaded up. when the path is used.
       if (isset($data['file']) && !isset($data['file path'])) {
         $data['file path'] = drupal_get_path('module', $data['module']);
       }
@@ -245,30 +248,26 @@ function me_menu_alter(&$callbacks) {
       // the me handler work correctly.
       $new_parts = array();
 
-      // The only load argument that needs to be passed by reference is map.
-      // We make sure that we have map in the right place to be passed by reference.
-      if (!is_array($data['load arguments'])) {
-        $data['load arguments'] = array();
-      }
-
-      $load_arguments = array();
       while (list($key, $val) = each($parts)) {
-        if (in_array($val, $handlers)) {
-          $load_arguments[$key] = str_replace('%', '', $val) .'_load';
-          $val = '%me';
+        if (array_key_exists($val, $handlers)) {
+          $val = $handlers[$val];
         }
         $new_parts[] = $val;
       }
       $new_path = implode('/', $new_parts);
 
-      // Find the current map index, and add our load arguments, putting map
-      // in the place we expect it to be.
-      if (FALSE !== ($map_index = array_search('%map', $data['load arguments']))) {
-        unset($data['load arguments'][$map_index]);
-        $map_index = strval($map_index);
+      // We need to be careful with load arguments due too http://drupal.org/node/373568.
+      // We therefore only add load arguments if there are some there already.
+      // The only load argument that needs to be passed by reference is map.
+      // We make sure that we have map in the right place to be passed by reference.
+      if (is_array($data['load arguments'])) {
+        // Find the current map index, and add our load arguments, putting map
+        // in the place we expect it to be.
+        if (FALSE !== ($map_index = array_search('%map', $data['load arguments']))) {
+          unset($data['load arguments'][$map_index]);
+          array_unshift($data['load arguments'], '%map', '%index', strval($map_index));
+        }
       }
-
-      array_unshift($data['load arguments'], $load_arguments, '%map', '%index', $map_index);
 
       // First, we need to find the parent.
       $parent_path = implode('/', array_slice($parts, 0, count($parts) - 1));
@@ -309,15 +308,14 @@ function me_menu_alter(&$callbacks) {
 }
 
 /**
- * Menu load callback in place of user_load().
+ * Helper function to set up arguments in meun _load callbacks.
  */
-function me_load($uid, $arguments, &$map, $index, $map_index = FALSE) {
+function _me_load_arguments($uid, &$map = NULL, $index = NULL, $map_index = FALSE, $args = array(), $function = 'user_load') {
   // We need to get all the arguments, remove our custom ones,
   // put %map in the right place, then call the menu load callack.
-  $args = func_get_args();
-  array_splice($args, 0, min(5, count($args)));
+  array_splice($args, 0, min(4, count($args)));
 
-  if (FALSE !== $map_index) {
+  if (!is_null($map) && FALSE !== $map_index) {
     $insert = array(
       &$map,
     );
@@ -328,11 +326,35 @@ function me_load($uid, $arguments, &$map, $index, $map_index = FALSE) {
   array_unshift($args, _me_check_arg($uid));
 
   // If we have a valid function to call, call it.
-  if (isset($arguments[$index]) && function_exists($arguments[$index])) {
-    return call_user_func_array($arguments[$index], $args);
+  if (function_exists($function)) {
+    return call_user_func_array($function, $args);
   }
 
   return FALSE;
+}
+
+/**
+ * Menu load callback in place of user_load().
+ */
+function me_load($uid, &$map = NULL, $index = NULL, $map_index = FALSE) {
+  $args = func_get_args();
+  return _me_load_arguments($uid, $map, $index, $map_index, $args);
+}
+
+/**
+ * Menu load callback in place of user_uid_optional_load().
+ */
+function me_uid_optional_load($uid, &$map = NULL, $index = NULL, $map_index = FALSE) {
+  $args = func_get_args();
+  return _me_load_arguments((isset($uid) ? $uid : $GLOBALS['user']->uid), $map, $index, $map_index, $args);
+}
+
+/**
+ * Menu load callback in place of user_category_load().
+ */
+function me_category_load($uid, &$map = NULL, $index = NULL, $map_index = FALSE) {
+  $args = func_get_args();
+  return _me_load_arguments($uid, $map, $index, $map_index, $args, 'user_category_load');
 }
 
 /**
@@ -346,6 +368,20 @@ function me_to_arg($arg, $map, $index) {
   else {
     return $uid;
   }
+}
+
+/**
+ * Menu to_arg function for %me_uid_optional.
+ */
+function me_uid_optional_to_arg($arg, $map, $index) {
+  return me_to_arg($arg, $map, $index);
+}
+
+/**
+ * Menu to_arg function for %me_category.
+ */
+function me_category_to_arg($arg, $map, $index) {
+  return me_to_arg($arg, $map, $index);
 }
 
 /**
