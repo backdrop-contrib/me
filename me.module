@@ -458,39 +458,7 @@ function me_menu() {
     'type' => MENU_NORMAL_ITEM,
   );
 
-  // TODO: Remove when/if http://drupal.org/node/109588 gets in.
-  // We don't need this here if we are doing redirects.
-  if (!me_variable_get('me_redirect')) {
-    $items['user/'. me_variable_get('me_alias') .'/edit'] = array(
-      'title' => 'Edit',
-      'page callback' => 'me_user_edit',
-      'access callback' => 'me_user_edit_access',
-      'type' => MENU_LOCAL_TASK,
-    );
-  }
-
   return $items;
-}
-
-/**
- * Menu callback to redirect to the user edit pages with the correct
- * user id.
- *
- * TODO: Remove when/if http://drupal.org/node/109588 gets in.
- */
-function me_user_edit() {
-  drupal_goto('user/'. $GLOBALS['user']->uid .'/edit');
-}
-
-/**
- * Menu access callback to check access before user edit redirection
- * takes place. This keeps 'me' in the path when access will be denied
- * anyway, and saves an extra request.
- *
- * TODO: Remove when/if http://drupal.org/node/109588 gets in.
- */
-function me_user_edit_access() {
-  return user_edit_access($GLOBALS['user']);
 }
 
 /**
