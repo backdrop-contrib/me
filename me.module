@@ -34,7 +34,6 @@ function me_help($path, $arg) {
  */
 function me_theme_registry_alter(&$theme_registry) {
   if (isset($theme_registry['menu_item_link']['function'])) {
-    variable_set('me_theme_menu_item_link_func', $theme_registry['menu_item_link']['function']);
     $theme_registry['menu_item_link']['function'] = 'me_theme_menu_item_link';
   }
 }
@@ -51,7 +50,20 @@ function me_preprocess_menu_item_link(&$vars) {
  */
 function me_theme_menu_item_link($link) {
   _me_check_path($link);
-  $function = me_variable_get('me_theme_menu_item_link_func');
+
+  if (isset($GLOBALS['custom_theme']) && function_exists($GLOBALS['custom_theme'] .'_menu_item_link')) {
+    $function = $GLOBALS['custom_theme'] .'_menu_item_link';
+  }
+  elseif (isset($GLOBALS['theme_key']) && function_exists($GLOBALS['theme_key'] .'_menu_item_link')) {
+    $function = $GLOBALS['theme_key'] .'_menu_item_link';
+  }
+  elseif (isset($GLOBALS['theme_engine']) && function_exists($GLOBALS['theme_engine'] .'_menu_item_link')) {
+    $function = $GLOBALS['theme_engine'] .'_menu_item_link';
+  }
+  else {
+    $function = 'theme_menu_item_link';
+  }
+
   return $function($link);
 }
 
@@ -103,7 +115,6 @@ function me_variable_get($name) {
     'me_paths' => '',
     'me_redirect_anonymous' => '',
     'me_rewrite_link' => TRUE,
-    'me_theme_menu_item_link_func' => 'theme_menu_item_link',
     'me_user_override' => FALSE,
   );
 
