@@ -12,29 +12,21 @@
  */
 function me_views_data_alter(&$cache) {
   // Make our handler the one to use for handling user arguments.
-  $cache['users']['uid']['argument']['handler'] = 'me_views_handler_argument_user_uid';
-  $cache['users']['name']['argument']['handler'] = 'me_views_handler_argument_user_name';
-}
+  // We need to override the file, path, and parent here so views with one
+  // of the user id or username arguments don't break. Because we are doing an
+  // override, we actually don't need to implement hook_views_handlers().
 
-/**
- * Implementation of hook_views_handlers().
- */
-function me_views_handlers() {
-  return array(
-    'info' => array(
-      'path' => drupal_get_path('module', 'me') .'/includes',
-    ),
-    'handlers' => array(
-      'me_views_handler_argument_user_uid' => array(
-        'parent' => 'views_handler_argument_user_uid',
-      ),
-    ),
-    'handlers' => array(
-      'me_views_handler_argument_user_name' => array(
-        'parent' => 'views_handler_argument_string',
-      ),
-    ),
-  );
+  // UID argument.
+  $cache['users']['uid']['argument']['handler'] = 'me_views_handler_argument_user_uid';
+  $cache['users']['uid']['argument']['file'] = 'me_views_handler_argument_user_uid.inc';
+  $cache['users']['uid']['argument']['path'] = drupal_get_path('module', 'me') .'/includes';
+  $cache['users']['uid']['argument']['parent'] = 'views_handler_argument_user_uid';
+
+  // Name argument.
+  $cache['users']['name']['argument']['handler'] = 'me_views_handler_argument_user_name';
+  $cache['users']['name']['argument']['file'] = 'me_views_handler_argument_user_name.inc';
+  $cache['users']['name']['argument']['path'] = drupal_get_path('module', 'me') .'/includes';
+  $cache['users']['name']['argument']['parent'] = 'views_handler_argument_string';
 }
 
 /**
