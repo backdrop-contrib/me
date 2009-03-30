@@ -209,6 +209,18 @@ function me_handler($parts, $callback) {
     }
   }
 
+  // Before going any further, set the current menu router item to include
+  // paths with %user, which allows modules to use menu_get_object() instead
+  // of arg() in blocks and the like.
+  $router_item = menu_get_item();
+  foreach ($router_item['load_functions'] as $index => $function) {
+    // If the function is a me handled function, then swap the handler out with user.
+    if (0 === strpos($function, 'me')) {
+      $router_item['load_functions'][$index] = 'user_load';
+    }
+  }
+  menu_set_item($_GET['q'], $router_item);
+
   return call_user_func_array($callback, $args);
 }
 
