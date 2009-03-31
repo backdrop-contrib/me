@@ -18,6 +18,7 @@ function me_uninstall() {
     'me_path_rule',
     'me_paths',
     'me_redirect_anonymous',
+    'me_theme_menu_item_link',
     'me_rewrite_link',
     'me_user_override',
   );
