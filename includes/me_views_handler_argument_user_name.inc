@@ -30,6 +30,7 @@ class me_views_handler_argument_user_name extends views_handler_argument_string 
     $options = parent::option_definition();
 
     $options['me_alias'] = array('default' => FALSE);
+    $options['me_redirect'] = array('default' => FALSE);
     return $options;
   }
 
@@ -43,10 +44,18 @@ class me_views_handler_argument_user_name extends views_handler_argument_string 
     $form['me_alias'] = array(
       '#type' => 'checkbox',
       '#title' => t("Let users enter the 'me' alias instead of their user name."),
-      '#description' => t("If selected, users can enter the 'me' alias inplace of their user name. When this option is selected, "
-        ."the wildcard can not be the same as the 'me' alias and you will not be able to select a user whos name is the same "
-        ."as the 'me' alias."),
+      '#description' => t("If selected, users can enter the 'me' alias inplace of their user name. When this option is selected, the wildcard can not be the same as the 'me' alias and you will not be able to select a user whos name is the same as the 'me' alias."),
       '#default_value' => !empty($this->options['me_alias']),
+    );
+
+    // Allow the view creator to decide if the 'me' alias will redirect to the name.
+    $form['me_redirect'] = array(
+      '#type' => 'checkbox',
+      '#title' => t("Redirect to the users name when 'me' is entered as an argument."),
+      '#description' => t("If selected, when a user enters 'me' for this argument, they will be redirected to the view with their user name inplace of 'me'."),
+      '#default_value' => !empty($this->options['me_redirect']),
+      '#process' => array('views_process_dependency'),
+      '#dependency' => array('edit-options-me-alias' => array(TRUE)),
     );
   }
 
@@ -72,7 +81,10 @@ class me_views_handler_argument_user_name extends views_handler_argument_string 
     // Whilst we do validate this in the options form, this is here for views that
     // were created before the me module was installed.
     if (!_me_is_alias($this->options['wildcard']) && !empty($this->options['me_alias'])) {
-      return parent::set_argument(_me_views_set_argument($arg, $this->options['break_phrase'], TRUE));
+      // Set a flag on the view so we know if we need to redirect or not.
+      $this->view->me_redirect = $this->options['me_redirect'];
+
+      return parent::set_argument(_me_views_set_argument($arg, $this->view, $this->options['break_phrase'], TRUE));
     }
   }
 }

@@ -464,7 +464,9 @@ function _me_is_alias($arg) {
 }
 
 /**
- * Implementation of hook_views_api().
+ * Implementation of Views' hook_views_api().
+ *
+ * See http://drupal.org/project/views for module and hook information.
  */
 function me_views_api() {
   return array(
@@ -563,14 +565,11 @@ function me_admin_settings_form(&$form_state) {
       ME_PATH_EXCLUDE => t('Use me alias on every path except the listed paths.'),
       ME_PATH_INCLUDE => t('Use me alias only on the listed paths.'),
     );
-    $description = t("Enter one path per line as Drupal paths. The '*' character is a wildcard. Example paths are %blog for the '
-      .'blog page and %blog-wildcard for every personal blog. %front is the front page.",
-      array('%blog' => 'blog', '%blog-wildcard' => 'blog/*', '%front' => '<front>'));
+    $description = t("Enter one path per line as Drupal paths. The '*' character is a wildcard. Example paths are %blog for the blog page and %blog-wildcard for every personal blog. %front is the front page.", array('%blog' => 'blog', '%blog-wildcard' => 'blog/*', '%front' => '<front>'));
 
     if ($access) {
       $options[ME_PATH_PHP] = t('Use me alias if the following PHP code returns <code>TRUE</code> (PHP-mode, experts only).');
-      $description .= ' '. t('If the PHP-mode is chosen, enter PHP code between %php. Note that executing incorrect PHP-code can '
-        .'break your Drupal site.', array('%php' => '<?php ?>'));
+      $description .= ' '. t('If the PHP-mode is chosen, enter PHP code between %php. Note that executing incorrect PHP-code can break your Drupal site.', array('%php' => '<?php ?>'));
     }
     $form['me_paths_settings']['me_path_rule'] = array(
       '#type' => 'radios',
@@ -582,10 +581,7 @@ function me_admin_settings_form(&$form_state) {
       '#type' => 'textarea',
       '#title' => t('Paths'),
       '#default_value' => $paths,
-      '#description' => $description . t('<p>NOTE: This option simply ensures that the browser address bar for these paths have '
-        .'the uid and not me. The me alias will still work for these paths. It will have no effect on specific uids in paths, '
-        .'but if the path includes the me alias, then me will be affected for those paths. This will only affect paths '
-        .'that me can already handle. It will not allow me to work for unknown paths.</p>'),
+      '#description' => $description . t('<p>NOTE: This option simply ensures that the browser address bar for these paths have the uid and not me. The me alias will still work for these paths. It will have no effect on specific uids in paths, but if the path includes the me alias, then me will be affected for those paths. This will only affect paths that me can already handle. It will not allow me to work for unknown paths.</p>'),
     );
   }
 
@@ -638,9 +634,7 @@ function me_user($op, &$edit, &$account, $category = NULL) {
       $form['me_disable'] = array(
         '#type' => 'checkbox',
         '#title' => t("Disable '%me' alias for this account", array('%me' => me_variable_get('me_alias'))),
-        '#description' => t('This option stops your user id from being replaced with %me. %me will still work when entered '
-          .'into the address bar, but you will be redirected to a page with your uid in its place.',
-          array('%me' => me_variable_get('me_alias'))),
+        '#description' => t('This option stops your user id from being replaced with %me. %me will still work when entered into the address bar, but you will be redirected to a page with your uid in its place.', array('%me' => me_variable_get('me_alias'))),
         '#default_value' => !empty($account->me_disable),
       );
 
