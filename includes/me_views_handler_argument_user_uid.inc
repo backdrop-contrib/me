@@ -83,9 +83,11 @@ class me_views_handler_argument_user_uid extends views_handler_argument_user_uid
     if (!_me_is_alias($this->options['wildcard']) && !empty($this->options['me_alias'])) {
       // Set a flag on the view so we know if we need to redirect or not.
       $this->view->me_redirect = $this->options['me_redirect'];
-
-      return parent::set_argument(_me_views_set_argument($arg, $this->view, $this->options['break_phrase']));
+      $arg = _me_views_set_argument($arg, $this->view, $this->options['break_phrase']);
     }
+
+    // We always need to return the parent::set_argument() call.
+    return parent::set_argument($arg);
   }
 }
 
