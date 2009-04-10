@@ -84,6 +84,14 @@ class me_views_handler_argument_user_uid extends views_handler_argument_user_uid
       // Set a flag on the view so we know if we need to redirect or not.
       $this->view->me_redirect = $this->options['me_redirect'];
       $arg = _me_views_set_argument($arg, $this->view, $this->options['break_phrase']);
+
+      // If we are redirecting, make sure the argument does not get validated on the first pass,
+      // as this can cause multiple messages or errors, or the redirect itself not to happen.
+      // The validation will happen after the redirect. This is only an issue for the validation,
+      // as nothing else oon the argument can cause the same amount of grief.
+      if (!empty($this->view->me_redirect)) {
+        $this->argument_validated = TRUE;
+      }
     }
 
     // We always need to return the parent::set_argument() call.

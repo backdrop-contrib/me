@@ -37,8 +37,8 @@ function me_views_data_alter(&$cache) {
  * See http://drupal.org/project/views for module and hook information.
  */
 function me_views_pre_execute(&$view) {
-  // Check if we need to do a redirect. Be sure not to redirect in a live preview.
-  if (!empty($view->me_redirect) && empty($view->live_preview)) {
+  // Check if we need to do a redirect.
+  if (!empty($view->me_redirect)) {
     // We should always be able to redirect here regardless, as our handler has to
     // have run for our option to be set, which means we need to redirect anyway.
 
@@ -88,6 +88,11 @@ function _me_views_set_argument($arg, &$view, $break_phase, $username = FALSE) {
       $seperator = ',';
       $uid_args = explode(',', $arg);
     }
+  }
+
+  // Be sure not to redirect in a live preview.
+  if (!empty($view->live_preview)) {
+    $view->me_redirect = FALSE;
   }
 
   // Check if we need to do a redirect, and make sure the option is disabled if we don't.
