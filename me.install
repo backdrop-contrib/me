@@ -29,14 +29,21 @@ function me_uninstall() {
 }
 
 /**
+ * Implementation of hook_install().
+ */
+function me_install() {
+  db_query("UPDATE {system} SET weight = 9999 WHERE name = 'me'");
+}
+
+/**
  * Implementation of hook_update_N() to increase the weight of me
  * to make sure other modules can use the %user wildcards as they expect
  * them to be.
  */
-function me_update_6130() {
+function me_update_6250() {
   $ret = array();
 
-  $ret[] = update_sql("UPDATE {system} SET weight = 999 WHERE name = 'me'");
+  $ret[] = update_sql("UPDATE {system} SET weight = 9999 WHERE name = 'me'");
 
   return $ret;
 }
