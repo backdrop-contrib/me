@@ -393,7 +393,7 @@ function me_category_load($uid, &$map = NULL, $index = NULL, $map_index = FALSE)
 function me_to_arg($arg, $map, $index) {
   $uid = user_uid_optional_to_arg($arg, $map, $index);
   if (me_variable_get('me_rewrite_link') && !_me_user_disabled()) {
-    return $uid == $GLOBALS['user']->uid ? me_variable_get('me_alias') : $uid;
+    return $uid == $GLOBALS['user']->uid ? _me_get_me_alias() : $uid;
   }
   else {
     return $uid;
@@ -450,6 +450,36 @@ function _me_check_arg($arg, $username = FALSE, $redirect = TRUE) {
 }
 
 /**
+ * Helper function to return the me alias.
+ *
+ * @param $print_name
+ *   Shows a friendly print name of the alias instead
+ *   of the actual alias itself. This argument is only
+ *   checked if the token module is installed.
+ *
+ * @return string
+ *   The me alias, token replaced if appropriate.
+ */
+function _me_get_me_alias($print = FALSE) {
+  $alias = me_variable_get('me_alias');
+
+  // Replace with any global tokens that might have been used in the alias.
+  if (module_exists('token')) {
+    $replaced_alias = token_replace($alias, 'global');
+
+    // They will not match if a replacement happened.
+    if ($print && $replaced_alias != $alias) {
+      $alias = ucwords(str_replace(array('-', '[', ']'), array(' ', ''), $alias));
+    }
+    else {
+      $alias = $replaced_alias;
+    }
+  }
+
+  return $alias;
+}
+
+/**
  * A helper function to check if a string is equal to the 'me' alias.
  *
  * @param $arg
@@ -460,7 +490,7 @@ function _me_check_arg($arg, $username = FALSE, $redirect = TRUE) {
  */
 function _me_is_alias($arg) {
   $compare_function = me_variable_get('me_case_insensitive') ? 'strcasecmp' : 'strcmp';
-  return $compare_function($arg, me_variable_get('me_alias')) === 0;
+  return $compare_function($arg, _me_get_me_alias()) === 0;
 }
 
 /**
@@ -515,6 +545,18 @@ function me_admin_settings_form(&$form_state) {
     '#default_value' => me_variable_get('me_alias'),
     '#required' => TRUE,
   );
+  if (module_exists('token')) {
+    $form['me_token_help'] = array(
+      '#title' => t('Replacement patterns for me alias'),
+      '#type' => 'fieldset',
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      'help' => array(
+        '#type' => 'markup',
+        '#value' => theme('token_help', 'global'),
+      ),
+    );
+  }
 
   $form['me_case_insensitive'] = array(
     '#type' => 'checkbox',
@@ -601,8 +643,21 @@ function me_admin_settings_form(&$form_state) {
  * Validation callback for me_admin_settings_form.
  */
 function me_admin_settings_form_validate($form, &$form_state) {
-  if (preg_match('/[^a-zA-Z]/', $form_state['values']['me_alias'])) {
-    form_set_error('me_alias', t('The alias can only contain characters from a-z and A-Z.'));
+  // If the token module is installed, we need to also allow a list of tokens
+  // that are allowed to match against. We include all global tokens here, even though
+  // some of them don't really make sense, but that is up to the end user.
+  $token_list = array();
+  if (module_exists('token')) {
+    $token_list = array_map(create_function('$n', 'return "[$n]";'), array_keys(array_pop(token_get_list('global'))));
+  }
+  if (preg_match('/[^a-zA-Z]/', $form_state['values']['me_alias']) && !in_array($form_state['values']['me_alias'], $token_list)) {
+    if (!empty($token_list)) {
+      $message = t('The alias can only contain characters from a-z and A-Z, or one of the tokens specified in the "Replacement patterns for me alias" section.');
+    }
+    else {
+      $message = t('The alias can only contain characters from a-z and A-Z.');
+    }
+    form_set_error('me_alias', $message);
   }
 }
 
@@ -616,7 +671,7 @@ function me_user($op, &$edit, &$account, $category = NULL) {
         return array(
           array(
             'name' => 'me',
-            'title' => t("'@me' alias", array('@me' => me_variable_get('me_alias'))),
+            'title' => t("'@me' alias", array('@me' => _me_get_me_alias(TRUE))),
             'weight' => 2,
           ),
         );
@@ -633,8 +688,8 @@ function me_user($op, &$edit, &$account, $category = NULL) {
 
       $form['me_disable'] = array(
         '#type' => 'checkbox',
-        '#title' => t("Disable '%me' alias for this account", array('%me' => me_variable_get('me_alias'))),
-        '#description' => t('This option stops your user id from being replaced with %me. %me will still work when entered into the address bar, but you will be redirected to a page with your uid in its place.', array('%me' => me_variable_get('me_alias'))),
+        '#title' => t("Disable '%me' alias for this account", array('%me' => _me_get_me_alias(TRUE))),
+        '#description' => t('This option stops your user id from being replaced with %me. %me will still work when entered into the address bar, but you will be redirected to a page with your uid in its place.', array('%me' => _me_get_me_alias(TRUE))),
         '#default_value' => !empty($account->me_disable),
       );
 
@@ -649,7 +704,7 @@ function me_user($op, &$edit, &$account, $category = NULL) {
         $account->content['me'] = array(
           '#type' => 'markup',
           '#value' => t("'%me' aliases are $enabled for this account. Account user id is '@uid'.",
-            array('%me' => me_variable_get('me_alias'), '@uid' => $account->uid)),
+            array('%me' => _me_get_me_alias(TRUE), '@uid' => $account->uid)),
           '#weight' => 10,
         );
       }
