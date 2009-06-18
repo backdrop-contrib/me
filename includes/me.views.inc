@@ -29,6 +29,14 @@ function me_views_data_alter(&$cache) {
   $cache['users']['name']['argument']['file'] = 'me_views_handler_argument_user_name.inc';
   $cache['users']['name']['argument']['path'] = drupal_get_path('module', 'me') .'/includes';
   $cache['users']['name']['argument']['parent'] = 'views_handler_argument_string';
+
+  if (module_exists('comment')) {
+    // User posted or commented.
+    $cache['node']['uid_touch']['argument']['handler'] = 'me_views_handler_argument_comment_user_uid';
+    $cache['node']['uid_touch']['argument']['file'] = 'me_views_handler_argument_comment_user_uid.inc';
+    $cache['node']['uid_touch']['argument']['path'] = drupal_get_path('module', 'me') .'/includes';
+    $cache['node']['uid_touch']['argument']['parent'] = 'views_handler_argument_comment_user_uid';
+  }
 }
 
 /**
