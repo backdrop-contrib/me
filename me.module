@@ -711,3 +711,14 @@ function me_user($op, &$edit, &$account, $category = NULL) {
       break;
   }
 }
+
+/**
+ * Implementation of CTools hook_ctools_plugin_dierctory().
+ *
+ * See http://drupal.org/project/ctools for module and hook information.
+ */
+function me_ctools_plugin_directory($module, $plugin) {
+  if ($module == 'ctools' && $plugin == 'arguments') {
+    return 'plugins';
+  }
+}
