@@ -340,7 +340,12 @@ function me_menu_alter(&$callbacks) {
 /**
  * Helper function to set up arguments in meun _load callbacks.
  */
-function _me_load_arguments($uid, &$map = NULL, $index = NULL, $map_index = FALSE, $args = array(), $function = 'user_load') {
+function _me_load_arguments($uid, &$map = NULL, $index = NULL, $map_index = FALSE, $args = array(), $function = 'user_load', $reset = FALSE) {
+  global $user;
+  static $cache = array();
+  if ($reset) {
+    $cache = array();
+  }
   // We need to get all the arguments, remove our custom ones,
   // put %map in the right place, then call the menu load callack.
   array_splice($args, 0, min(4, count($args)));
@@ -357,7 +362,24 @@ function _me_load_arguments($uid, &$map = NULL, $index = NULL, $map_index = FALS
 
   // If we have a valid function to call, call it.
   if (function_exists($function)) {
-    return call_user_func_array($function, $args);
+    if ($function == 'user_load' || $function == 'user_category_load') {
+      if (!isset($cache[$function][$args[0]])) {
+        // Use already created object for current user:
+        if ($args[0] == $user->uid) {
+          $cache[$function][$args[0]] = $user;
+        }
+        else {
+          // Call user_load and store in cache:
+          $cache[$function][$args[0]] = call_user_func_array($function, $args);
+        }
+      }
+      // Use cached user's object:
+      $result = $cache[$function][$args[0]];
+    }
+    else {
+      $result = call_user_func_array($function, $args);
+    }
+    return $result;
   }
 
   return FALSE;
