@@ -423,7 +423,7 @@ function me_load($uid, &$map = NULL, $index = NULL, $map_index = FALSE) {
  * Menu load callback in place of user_uid_optional_load().
  */
 function me_uid_optional_load($uid, &$map = NULL, $index = NULL, $map_index = FALSE) {
-  if (!$GLOBALS['user']->uid) {
+  if (!isset($uid) && !$GLOBALS['user']->uid) {
     return;
   }
   $args = func_get_args();
