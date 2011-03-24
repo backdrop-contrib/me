@@ -390,14 +390,8 @@ function _me_load_arguments($uid, &$map = NULL, $index = NULL, $map_index = FALS
   if (function_exists($function)) {
     if ($function == 'user_load' || $function == 'user_category_load') {
       if (!isset($cache[$function][$args[0]])) {
-        // Use already created object for current user:
-        if ($args[0] == $user->uid) {
-          $cache[$function][$args[0]] = $user;
-        }
-        else {
-          // Call user_load and store in cache:
-          $cache[$function][$args[0]] = call_user_func_array($function, $args);
-        }
+        // Call user_load and store in cache:
+        $cache[$function][$args[0]] = call_user_func_array($function, $args);
       }
       // Use cached user's object:
       $result = $cache[$function][$args[0]];
