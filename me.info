@@ -1,3 +1,7 @@
+;$Id$
 name = 'me' Aliases
 description = Provides links to current user's pages using 'me' instead of the numerical user id.
-core = 6.x
+core = 7.x
+
+files[] = me.install
+files[] = me.module

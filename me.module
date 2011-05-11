@@ -1,5 +1,5 @@
 <?php
-
+//$Id$
 /**
  * @file
  *
@@ -19,7 +19,7 @@ define('ME_PATH_INCLUDE', 1);
 define('ME_PATH_PHP', 2);
 
 /**
- * Implementation of hook_help().
+ * Implements hook_help().
  */
 function me_help($path, $arg) {
   switch ($path) {
@@ -29,7 +29,7 @@ function me_help($path, $arg) {
 }
 
 /**
- * Implementation of hook_theme_registry_alter().
+ * Implements hook_theme_registry_alter().
  *
  * There is a different registry version for each theme,
  * and this function will be called for each of them.
@@ -43,61 +43,61 @@ function me_theme_registry_alter(&$theme_registry) {
 }
 
 /**
- * Implementaiton of moduleName_preprocess_hook() for theme_menu_item_link.
+ * Implementaiton of moduleName_preprocess_hook() for theme_menu_link.
  */
-function me_preprocess_menu_item_link(&$vars) {
-  _me_check_path($vars['link']);
+function me_preprocess_menu_link(&$vars) {
+  _me_check_path($vars['element']);
 }
 
 /**
  * Implementation of theme_menu_item_link().
  */
-function me_theme_menu_item_link($link) {
-  static $_functions = array();
-
-  $theme = $GLOBALS['theme'];
-
-  if (!isset($_functions[$theme])) {
-    $registry = theme_get_registry();
-    if (function_exists($candidate = $registry['menu_item_link']['me_original_function'])) {
-      $function = $candidate;
-    }
-    else if (isset($GLOBALS['theme_info'])) {
-      $themes = $GLOBALS['base_theme_info'];
-      $themes[] = $GLOBALS['theme_info'];
-      foreach (array_reverse($themes) as $theme_info) {
-        $candidate = $theme_info->name .'_menu_item_link';
-        if (function_exists($candidate)) {
-          $function = $candidate;
-          break;
-        }
-      }
-    }
-    if (isset($function)) {
-      // do nothing
-    }
-    elseif (isset($GLOBALS['theme_key']) && function_exists($candidate = $GLOBALS['theme_key'] .'_menu_item_link')) {
-      $function = $candidate;
-    }
-    elseif (isset($GLOBALS['theme_engine']) && function_exists($candidate = $GLOBALS['theme_engine'] .'_menu_item_link')) {
-      $function = $candidate;
-    }
-    elseif (function_exists('theme_menu_item_link')) {
-      $function = 'theme_menu_item_link';
-    }
-    $_functions[$theme] = $function;
-  }
-
-  if (isset($_functions[$theme]) && $_functions[$theme] !== __FUNCTION__) {
-    _me_check_path($link);
-    $function = $_functions[$theme];
-    return $function($link);
-  }
-  else {
-    // This should never happen.
-    return __FUNCTION__;
-  }
-}
+// function me_theme_menu_item_link($link) {
+//   static $_functions = array();
+//
+//   $theme = $GLOBALS['theme'];
+//
+//   if (!isset($_functions[$theme])) {
+//     $registry = theme_get_registry();
+//     if (function_exists($candidate = $registry['menu_item_link']['me_original_function'])) {
+//       $function = $candidate;
+//     }
+//     else if (isset($GLOBALS['theme_info'])) {
+//       $themes = $GLOBALS['base_theme_info'];
+//       $themes[] = $GLOBALS['theme_info'];
+//       foreach (array_reverse($themes) as $theme_info) {
+//         $candidate = $theme_info->name . '_menu_item_link';
+//         if (function_exists($candidate)) {
+//           $function = $candidate;
+//           break;
+//         }
+//       }
+//     }
+//     if (isset($function)) {
+//       // do nothing
+//     }
+//     elseif (isset($GLOBALS['theme_key']) && function_exists($candidate = $GLOBALS['theme_key'] . '_menu_item_link')) {
+//       $function = $candidate;
+//     }
+//     elseif (isset($GLOBALS['theme_engine']) && function_exists($candidate = $GLOBALS['theme_engine'] . '_menu_item_link')) {
+//       $function = $candidate;
+//     }
+//     elseif (function_exists('theme_menu_item_link')) {
+//       $function = 'theme_menu_item_link';
+//     }
+//     $_functions[$theme] = $function;
+//   }
+//
+//   if (isset($_functions[$theme]) && $_functions[$theme] !== __FUNCTION__) {
+//     _me_check_path($link);
+//     $function = $_functions[$theme];
+//     return $function($link);
+//   }
+//   else {
+//     // This should never happen.
+//     return __FUNCTION__;
+//   }
+// }
 
 /**
  * Helper function to check if a path can be rewritten or not.
@@ -111,11 +111,11 @@ function me_theme_menu_item_link($link) {
 function _me_check_path(&$link) {
   // If the link has been rewritten, and we are not supposed to be handling this
   // path, then rewite it back to its original.
-  if (me_variable_get('me_rewrite_link') && !_me_handle_path($link['href'])) {
-    $path_parts = explode('/', $link['href'], MENU_MAX_PARTS);
+  if (me_variable_get('me_rewrite_link') && !_me_handle_path($link['#href'])) {
+    $path_parts = explode('/', $link['#href'], MENU_MAX_PARTS);
 
     // The wildcarded path will either be in $link['path'], or $link['router_path'].
-    $wild_parts = explode('/', (isset($link['path']) ? $link['path'] : $link['router_path']), MENU_MAX_PARTS);
+    $wild_parts = explode('/', (isset($link['#original_link']['link_path']) ? $link['#original_link']['link_path'] : $link['#original_link']['router_path']), MENU_MAX_PARTS);
 
     // Go over each of the path parts and if one is equal to the me alias, make sure it is a wildcard,
     // and if so, switch it back out.
@@ -124,8 +124,8 @@ function _me_check_path(&$link) {
         $path_parts[$key] = $GLOBALS['user']->uid;
       }
     }
-
-    $link['href'] = implode('/', $path_parts);
+    $link['#href'] = implode('/', $path_parts);
+		$link['#original_link']['href'] = implode('/', $path_parts);
   }
 }
 
@@ -168,7 +168,6 @@ function _me_handle_path($path) {
   $paths = me_variable_get('me_paths');
   $path_rule = me_variable_get('me_path_rule');
   $path_match = TRUE;
-
   if (!empty($paths)) {
     if ($path_rule !== ME_PATH_PHP) {
       $path = drupal_get_path_alias($_GET['q']);
@@ -185,7 +184,10 @@ function _me_handle_path($path) {
       $path_match = !($path_rule xor $path_match);
     }
     else {
-      $path_match = drupal_eval($paths);
+      if (module_exists('php')) {
+        $path_match = php_eval($paths);
+
+      }
     }
   }
 
@@ -224,6 +226,7 @@ function me_handler($parts, $callback) {
     // check the corresponding menu part for the me alias,
     // if so, replace it out with the user id so we can redirect correctly.
     // If no changes are required, then call the required function.
+
     while (list($key, $val) = each($parts)) {
       if (0 === strpos($val, '%me') && _me_is_alias($menu_parts[$key])) {
         $redirect = TRUE;
@@ -268,7 +271,7 @@ function _me_user_disabled() {
 }
 
 /**
- * Implementation of hook_menu_alter().
+ * Implements hook_menu_alter().
  */
 function me_menu_alter(&$callbacks) {
   // Loop over each of the paths, finding all %user* loaders,
@@ -295,6 +298,7 @@ function me_menu_alter(&$callbacks) {
     }
 
     if ($found) {
+
       // We need to make sure that the correct files are loaded up. when the path is used.
       if (isset($data['file']) && !isset($data['file path'])) {
         $data['file path'] = drupal_get_path('module', $data['module']);
@@ -316,7 +320,7 @@ function me_menu_alter(&$callbacks) {
       // We therefore only add load arguments if there are some there already.
       // The only load argument that needs to be passed by reference is map.
       // We make sure that we have map in the right place to be passed by reference.
-      if (is_array($data['load arguments'])) {
+      if (isset($data['load arguments']) && is_array($data['load arguments'])) {
         // Find the current map index, and add our load arguments, putting map
         // in the place we expect it to be.
         if (FALSE !== ($map_index = array_search('%map', $data['load arguments']))) {
@@ -327,9 +331,16 @@ function me_menu_alter(&$callbacks) {
 
       // First, we need to find the parent.
       $parent_path = implode('/', array_slice($parts, 0, count($parts) - 1));
+			if(!array_key_exists($parent_path,$callbacks)){
+				 $parent_path=$path;
+			}
       if (in_array($parent_path, $processed)) {
         $parts = explode('/', $new_path, MENU_MAX_PARTS);
         $parent_path = implode('/', array_slice($parts, 0, count($parts) - 1));
+				if(!array_key_exists($parent_path,$callbacks)){
+				 $parent_path=$path;
+					//die($parent_path.' '.$path);
+				}
       }
       $parent = $callbacks[$parent_path];
 
@@ -367,6 +378,9 @@ function me_menu_alter(&$callbacks) {
  * Helper function to set up arguments in meun _load callbacks.
  */
 function _me_load_arguments($uid, &$map = NULL, $index = NULL, $map_index = FALSE, $args = array(), $function = 'user_load', $reset = FALSE) {
+
+
+  //die('dead');
   global $user;
   static $cache = array();
   if ($reset) {
@@ -387,6 +401,7 @@ function _me_load_arguments($uid, &$map = NULL, $index = NULL, $map_index = FALS
   array_unshift($args, _me_check_arg($uid));
 
   // If we have a valid function to call, call it.
+  $result = FALSE;
   if (function_exists($function)) {
     if ($function == 'user_load' || $function == 'user_category_load') {
       if (!isset($cache[$function][$args[0]])) {
@@ -399,29 +414,29 @@ function _me_load_arguments($uid, &$map = NULL, $index = NULL, $map_index = FALS
     else {
       $result = call_user_func_array($function, $args);
     }
-    return $result;
   }
-
-  return FALSE;
+  return $result;
 }
 
 /**
  * Menu load callback in place of user_load().
  */
 function me_load($uid, &$map = NULL, $index = NULL, $map_index = FALSE) {
-  $args = func_get_args();
-  return _me_load_arguments($uid, $map, $index, $map_index, $args);
+ return _me_load_arguments($uid, $map, $index, $map_index);
 }
 
 /**
  * Menu load callback in place of user_uid_optional_load().
  */
 function me_uid_optional_load($uid, &$map = NULL, $index = NULL, $map_index = FALSE) {
-  if (!isset($uid) && !$GLOBALS['user']->uid) {
-    return;
+  if (!isset($uid)) {
+    if (!$GLOBALS['user']->uid) {
+      return;
+    }
+    $uid = $GLOBALS['user']->uid;
   }
   $args = func_get_args();
-  return _me_load_arguments((isset($uid) ? $uid : $GLOBALS['user']->uid), $map, $index, $map_index, $args);
+  return _me_load_arguments($uid, $map, $index, $map_index, $args);
 }
 
 /**
@@ -437,19 +452,19 @@ function me_category_load($uid, &$map = NULL, $index = NULL, $map_index = FALSE)
  */
 function me_to_arg($arg, $map, $index) {
   $uid = user_uid_optional_to_arg($arg, $map, $index);
+
   if (me_variable_get('me_rewrite_link') && !_me_user_disabled()) {
-    return $uid == $GLOBALS['user']->uid ? _me_get_me_alias() : $uid;
+    $uid = $GLOBALS['user']->uid ? _me_get_me_alias() : $uid;
   }
-  else {
-    return $uid;
-  }
+  return $uid;
 }
 
 /**
  * Menu to_arg function for %me_uid_optional.
  */
 function me_uid_optional_to_arg($arg, $map, $index) {
-  return me_to_arg($arg, $map, $index);
+  //return me_to_arg($arg, $map, $index);
+  return user_uid_optional_to_arg($arg, $map, $index);
 }
 
 /**
@@ -475,18 +490,17 @@ function me_category_to_arg($arg, $map, $index) {
  */
 function _me_check_arg($arg, $username = FALSE, $redirect = TRUE) {
   $return = _me_is_alias($arg) ? $username ? $GLOBALS['user']->name : $GLOBALS['user']->uid : $arg;
-
   $redirect_path = me_variable_get('me_redirect_anonymous');
 
-  if ($redirect && $GLOBALS['user']->uid == 0 &&  !empty($redirect_path)) {
+  if ($redirect && $GLOBALS['user']->uid == 0 &&   !empty($redirect_path)) {
     // Copied from menu_get_item(). We can't call that here as it might cause a recursion loop.
     $original_map = arg(NULL, $_GET['q']);
     $parts = array_slice($original_map, 0, MENU_MAX_PARTS);
-    list($ancestors, $placeholders) = menu_get_ancestors($parts);
+    $ancestors = menu_get_ancestors($parts);
 
-    if (($router_item = db_fetch_array(db_query_range('SELECT * FROM {menu_router} WHERE path IN ('. implode (',', $placeholders) .') ORDER BY fit DESC', $ancestors, 0, 1))) && $router_item['page_callback'] == 'me_handler') {
+    if (($router_item = db_query_range('SELECT * FROM {menu_router} WHERE path IN (:ancestors) ORDER BY fit DESC', 0, 1, array(':ancestors' => $ancestors))->fetchAssoc()) && $router_item['page_callback'] == 'me_handler') {
       // Not unsetting the destination can cause evil redirect loops.
-      unset($_REQUEST['destination'], $_REQUEST['edit']['destination']);
+      unset($_GET['destination'], $_REQUEST['edit']['destination']);
       drupal_goto($redirect_path);
     }
   }
@@ -509,8 +523,8 @@ function _me_get_me_alias($print = FALSE) {
   $alias = me_variable_get('me_alias');
 
   // Replace with any global tokens that might have been used in the alias.
-  if (module_exists('token')) {
-    $replaced_alias = token_replace($alias, 'global');
+//   if (module_exists('token')) {
+    $replaced_alias = token_replace($alias);
 
     // They will not match if a replacement happened.
     if ($print && $replaced_alias != $alias) {
@@ -519,7 +533,7 @@ function _me_get_me_alias($print = FALSE) {
     else {
       $alias = $replaced_alias;
     }
-  }
+//   }
 
   return $alias;
 }
@@ -539,24 +553,24 @@ function _me_is_alias($arg) {
 }
 
 /**
- * Implementation of Views' hook_views_api().
+ * Implements hook_views_api().
  *
  * See http://drupal.org/project/views for module and hook information.
  */
-function me_views_api() {
-  return array(
-    'api' => views_api_version(),
-    'path' => drupal_get_path('module', 'me') .'/includes',
-  );
-}
+// function me_views_api() {
+//   return array(
+//     'api' => views_api_version(),
+//     'path' => drupal_get_path('module', 'me') . '/includes',
+//   );
+// }
 
 /**
- * Implementation of hook_menu().
+ * Implements hook_menu().
  */
 function me_menu() {
   $items = array();
 
-  $items['admin/settings/me'] = array(
+  $items['admin/config/me'] = array(
     'title' => "'Me' Aliases",
     'description' => "Configure the 'me' aliases, and how they're matched.",
     'page callback' => 'drupal_get_form',
@@ -569,18 +583,21 @@ function me_menu() {
 }
 
 /**
- * Implementation of hook_perm().
+ * Implements hook_permission().
  */
-function me_perm() {
+function me_permission() {
   return array(
-    'use PHP for me alias paths',
+    'use PHP for me alias paths' => array(
+      'title' => t('use PHP for me alias paths'),
+      'description' => t('use PHP for me alias paths'),
+    ),
   );
 }
 
 /**
  * Form callback for the admin settings form.
  */
-function me_admin_settings_form(&$form_state) {
+function me_admin_settings_form($form, &$form_state) {
   $form = array();
 
   $form['me_alias'] = array(
@@ -590,19 +607,16 @@ function me_admin_settings_form(&$form_state) {
     '#default_value' => me_variable_get('me_alias'),
     '#required' => TRUE,
   );
-  if (module_exists('token')) {
-    $form['me_token_help'] = array(
-      '#title' => t('Replacement patterns for me alias'),
-      '#type' => 'fieldset',
-      '#collapsible' => TRUE,
-      '#collapsed' => TRUE,
-      'help' => array(
-        '#type' => 'markup',
-        '#value' => theme('token_help', 'global'),
-      ),
-    );
-  }
-
+	$form['me_token_help'] = array(
+		'#title' => t('Replacement patterns for me alias'),
+		'#type' => 'fieldset',
+		'#collapsible' => TRUE,
+		'#collapsed' => TRUE,
+		'help' => array(
+			'#type' => 'markup',
+			'#markup' => theme('token_tree')
+		),
+	);
   $form['me_case_insensitive'] = array(
     '#type' => 'checkbox',
     '#title' => t('Case Insensitive Alias Checking'),
@@ -628,7 +642,6 @@ function me_admin_settings_form(&$form_state) {
     '#title' => t('Redirect to uid'),
     '#description' => t('When checked, perform a redirect so the users uid is shown in the address bar instead of the me alias.'),
     '#default_value' => me_variable_get('me_redirect'),
-
   );
 
   $form['me_redirect_anonymous'] = array(
@@ -644,8 +657,14 @@ function me_admin_settings_form(&$form_state) {
 
   if ($path_rule == ME_PATH_PHP && !$access) {
     $form['me_paths_settings'] = array();
-    $form['me_paths_settings']['me_path_rule'] = array('#type' => 'value', '#value' => $path_rule);
-    $form['me_paths_settings']['me_paths'] = array('#type' => 'value', '#value' => $paths);
+    $form['me_paths_settings']['me_path_rule'] = array(
+      '#type' => 'value',
+      '#value' => $path_rule,
+    );
+    $form['me_paths_settings']['me_paths'] = array(
+      '#type' => 'value',
+      '#value' => $paths,
+    );
   }
   else {
     $options = array(
@@ -656,7 +675,7 @@ function me_admin_settings_form(&$form_state) {
 
     if ($access) {
       $options[ME_PATH_PHP] = t('Use me alias if the following PHP code returns <code>TRUE</code> (PHP-mode, experts only).');
-      $description .= ' '. t('If the PHP-mode is chosen, enter PHP code between %php. Note that executing incorrect PHP-code can break your Drupal site.', array('%php' => '<?php ?>'));
+      $description .= ' ' . t('If the PHP-mode is chosen, enter PHP code between %php. Note that executing incorrect PHP-code can break your Drupal site.', array('%php' => '<?php ?>'));
     }
     $form['me_paths_settings']['me_path_rule'] = array(
       '#type' => 'radios',
@@ -679,7 +698,7 @@ function me_admin_settings_form(&$form_state) {
   // Quite a few options only have an affect on theme and menu rebuilds. We just do them here
   // to make sure the options have an instant effect.
   $form['#submit'][] = 'menu_rebuild';
-  $form['#submit'][] = 'drupal_rebuild_theme_registry';
+  $form['#submit'][] = 'drupal_theme_rebuild';
 
   return $form;
 }
@@ -692,10 +711,18 @@ function me_admin_settings_form_validate($form, &$form_state) {
   // that are allowed to match against. We include all global tokens here, even though
   // some of them don't really make sense, but that is up to the end user.
   $token_list = array();
-  if (module_exists('token')) {
-    $token_list = array_map(create_function('$n', 'return "[$n]";'), array_keys(array_pop(token_get_list('global'))));
-  }
-  if (preg_match('/[^a-zA-Z]/', $form_state['values']['me_alias']) && !in_array($form_state['values']['me_alias'], $token_list)) {
+  //$token_list = array_map(create_function('$n', 'return "[$n]";'), array_keys(array_pop(token_info())));
+	$tk_types=token_get_global_token_types();
+	$options = array(
+		'flat' => TRUE,
+		'restricted' => FALSE,
+		'depth' => 4,
+	);
+	foreach($tk_types as $type){
+		$tree = token_build_tree($type,$options);
+		$token_list=array_merge($token_list,array_keys($tree));
+	}
+  if (preg_match('/[^a-zA-Z\:]/', $form_state['values']['me_alias']) && !in_array($form_state['values']['me_alias'], $token_list)) {
     if (!empty($token_list)) {
       $message = t('The alias can only contain characters from a-z and A-Z, or one of the tokens specified in the "Replacement patterns for me alias" section.');
     }
@@ -707,63 +734,46 @@ function me_admin_settings_form_validate($form, &$form_state) {
 }
 
 /**
- * Implementation of hook_user().
+ * Implements hook_user_categories().
  */
-function me_user($op, &$edit, &$account, $category = NULL) {
-  switch ($op) {
-    case 'categories':
-      if (me_variable_get('me_user_override')) {
-        return array(
-          array(
-            'name' => 'me',
-            'title' => t("'@me' alias", array('@me' => _me_get_me_alias(TRUE))),
-            'weight' => 2,
-          ),
-        );
-      }
-      break;
-    case 'form' && $category == 'me':
-      $form = array();
-
-      $form['me_uid'] = array(
-        '#type' => 'item',
-        '#title' => t('User id'),
-        '#value' => $account->uid,
-      );
-
-      $form['me_disable'] = array(
-        '#type' => 'checkbox',
-        '#title' => t("Disable '%me' alias for this account", array('%me' => _me_get_me_alias(TRUE))),
-        '#description' => t('This option stops your user id from being replaced with %me. %me will still work when entered into the address bar, but you will be redirected to a page with your uid in its place.', array('%me' => _me_get_me_alias(TRUE))),
-        '#default_value' => !empty($account->me_disable),
-      );
-
-      return $form;
-    case 'view':
-      if (me_variable_get('me_user_override')) {
-        $enabled = 'enabled';
-        if (!empty($account->me_disable)) {
-          $enabled = 'disabled';
-        }
-
-        $account->content['me'] = array(
-          '#type' => 'markup',
-          '#value' => t("'%me' aliases are $enabled for this account. Account user id is '@uid'.",
-            array('%me' => _me_get_me_alias(TRUE), '@uid' => $account->uid)),
-          '#weight' => 10,
-        );
-      }
-      break;
+function me_user_categories() {
+  if (me_variable_get('me_user_override')) {
+    return array(
+      array(
+        'name' => 'me',
+        'title' => t("'@me' alias", array('@me' => _me_get_me_alias(TRUE))),
+        'weight' => 2,
+      ),
+    );
   }
 }
 
 /**
- * Implementation of CTools hook_ctools_plugin_dierctory().
+ * Implements hook_user_view().
+ */
+function me_user_view($account, $view_mode) {
+  if (me_variable_get('me_user_override')) {
+    $enabled = 'enabled';
+    if (!empty($account->me_disable)) {
+      $enabled = 'disabled';
+    }
+
+    $account->content['me'] = array(
+      '#type' => 'markup',
+      '#value' => t("'%me' aliases are $enabled for this account. Account user id is '@uid'.",
+            array('%me' => _me_get_me_alias(TRUE), '@uid' => $account->uid)),
+      '#weight' => 10,
+    );
+  }
+}
+
+/**
+ * Implements hook_ctools_plugin_dierctory().
  *
  * See http://drupal.org/project/ctools for module and hook information.
  */
-function me_ctools_plugin_directory($module, $plugin) {
-  if ($module == 'ctools' && $plugin == 'arguments') {
-    return 'plugins';
-  }
-}
+// function me_ctools_plugin_directory($module, $plugin) {
+//   if ($module == 'ctools' && $plugin == 'arguments') {
+//     return 'plugins';
+//   }
+// }
