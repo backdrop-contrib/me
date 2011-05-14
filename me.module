@@ -358,7 +358,7 @@ function me_menu_alter(&$callbacks) {
       }
 
       if (isset($data['page callback'])) {
-        if (!is_array($data['page arguments'])) {
+        if (isset($data['page arguments']) && !is_array($data['page arguments'])) {
           $data['page arguments'] = array();
         }
 
