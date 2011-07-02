@@ -125,7 +125,7 @@ function _me_check_path(&$link) {
       }
     }
     $link['#href'] = implode('/', $path_parts);
-		$link['#original_link']['href'] = implode('/', $path_parts);
+    $link['#original_link']['href'] = implode('/', $path_parts);
   }
 }
 
@@ -291,7 +291,7 @@ function me_menu_alter(&$callbacks) {
     $found = FALSE;
     $parts = explode('/', $path, MENU_MAX_PARTS);
     foreach ($handlers as $user_handler => $me_handler) {
-      if (in_array($user_handler, $parts)) {
+      if (isset($user_handler) && in_array($user_handler, $parts)) {
         $found = TRUE;
         break;
       }
@@ -331,29 +331,29 @@ function me_menu_alter(&$callbacks) {
 
       // First, we need to find the parent.
       $parent_path = implode('/', array_slice($parts, 0, count($parts) - 1));
-			if(!array_key_exists($parent_path,$callbacks)){
-				 $parent_path=$path;
-			}
+      if(!array_key_exists($parent_path,$callbacks)){
+         $parent_path=$path;
+      }
       if (in_array($parent_path, $processed)) {
         $parts = explode('/', $new_path, MENU_MAX_PARTS);
         $parent_path = implode('/', array_slice($parts, 0, count($parts) - 1));
-				if(!array_key_exists($parent_path,$callbacks)){
-				 $parent_path=$path;
-					//die($parent_path.' '.$path);
-				}
+        if(!array_key_exists($parent_path,$callbacks)){
+         $parent_path=$path;
+        }
       }
-      $parent = $callbacks[$parent_path];
-
-      if (!isset($data['page callback']) && isset($parent['page callback'])) {
-        $data['page callback'] = $parent['page callback'];
-        if (!isset($data['page arguments']) && isset($parent['page arguments'])) {
-          $data['page arguments'] = $parent['page arguments'];
-        }
-        if (!isset($data['file']) && isset($parent['file'])) {
-          $data['file'] = $parent['file'];
-        }
-        if (!isset($data['file path']) && isset($parent['file path'])) {
-          $data['file path'] = $parent['file path'];
+      if (isset($callbacks[$parent_path])) {
+        $parent = $callbacks[$parent_path];
+        if (!isset($data['page callback']) && isset($parent['page callback'])) {
+          $data['page callback'] = $parent['page callback'];
+          if (!isset($data['page arguments']) && isset($parent['page arguments'])) {
+            $data['page arguments'] = $parent['page arguments'];
+          }
+          if (!isset($data['file']) && isset($parent['file'])) {
+            $data['file'] = $parent['file'];
+          }
+          if (!isset($data['file path']) && isset($parent['file path'])) {
+            $data['file path'] = $parent['file path'];
+          }
         }
       }
 
@@ -363,7 +363,8 @@ function me_menu_alter(&$callbacks) {
         }
 
         $parts = explode('/', $new_path, MENU_MAX_PARTS);
-        $data['page arguments'] = array_merge(array($parts, $data['page callback']), $data['page arguments']);
+        if (isset($data['page arguments'])) $data['page arguments'] = array_merge(array($parts, $data['page callback']), $data['page arguments']);
+        else $data['page arguments'] = array($parts, $data['page callback']);
         $data['page callback'] = 'me_handler';
       }
 
@@ -379,8 +380,6 @@ function me_menu_alter(&$callbacks) {
  */
 function _me_load_arguments($uid, &$map = NULL, $index = NULL, $map_index = FALSE, $args = array(), $function = 'user_load', $reset = FALSE) {
 
-
-  //die('dead');
   global $user;
   static $cache = array();
   if ($reset) {
@@ -607,16 +606,16 @@ function me_admin_settings_form($form, &$form_state) {
     '#default_value' => me_variable_get('me_alias'),
     '#required' => TRUE,
   );
-	$form['me_token_help'] = array(
-		'#title' => t('Replacement patterns for me alias'),
-		'#type' => 'fieldset',
-		'#collapsible' => TRUE,
-		'#collapsed' => TRUE,
-		'help' => array(
-			'#type' => 'markup',
-			'#markup' => theme('token_tree')
-		),
-	);
+  $form['me_token_help'] = array(
+    '#title' => t('Replacement patterns for me alias'),
+    '#type' => 'fieldset',
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    'help' => array(
+      '#type' => 'markup',
+      '#markup' => theme('token_tree')
+    ),
+  );
   $form['me_case_insensitive'] = array(
     '#type' => 'checkbox',
     '#title' => t('Case Insensitive Alias Checking'),
@@ -712,16 +711,16 @@ function me_admin_settings_form_validate($form, &$form_state) {
   // some of them don't really make sense, but that is up to the end user.
   $token_list = array();
   //$token_list = array_map(create_function('$n', 'return "[$n]";'), array_keys(array_pop(token_info())));
-	$tk_types=token_get_global_token_types();
-	$options = array(
-		'flat' => TRUE,
-		'restricted' => FALSE,
-		'depth' => 4,
-	);
-	foreach($tk_types as $type){
-		$tree = token_build_tree($type,$options);
-		$token_list=array_merge($token_list,array_keys($tree));
-	}
+  $tk_types=token_get_global_token_types();
+  $options = array(
+    'flat' => TRUE,
+    'restricted' => FALSE,
+    'depth' => 4,
+  );
+  foreach($tk_types as $type){
+    $tree = token_build_tree($type,$options);
+    $token_list=array_merge($token_list,array_keys($tree));
+  }
   if (preg_match('/[^a-zA-Z\:]/', $form_state['values']['me_alias']) && !in_array($form_state['values']['me_alias'], $token_list)) {
     if (!empty($token_list)) {
       $message = t('The alias can only contain characters from a-z and A-Z, or one of the tokens specified in the "Replacement patterns for me alias" section.');
