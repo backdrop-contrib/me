@@ -569,7 +569,7 @@ function _me_is_alias($arg) {
 function me_menu() {
   $items = array();
 
-  $items['admin/config/me'] = array(
+  $items['admin/people/me'] = array(
     'title' => "'Me' Aliases",
     'description' => "Configure the 'me' aliases, and how they're matched.",
     'page callback' => 'drupal_get_form',
