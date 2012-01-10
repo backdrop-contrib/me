@@ -453,7 +453,7 @@ function me_to_arg($arg, $map, $index) {
   $uid = user_uid_optional_to_arg($arg, $map, $index);
 
   if (me_variable_get('me_rewrite_link') && !_me_user_disabled()) {
-    $uid = $GLOBALS['user']->uid ? _me_get_me_alias() : $uid;
+    $uid = ($uid == $GLOBALS['user']->uid) ? _me_get_me_alias() : $uid;
   }
   return $uid;
 }
