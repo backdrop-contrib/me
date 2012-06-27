@@ -111,7 +111,7 @@ function me_preprocess_menu_link(&$vars) {
 function _me_check_path(&$link) {
   // If the link has been rewritten, and we are not supposed to be handling this
   // path, then rewite it back to its original.
-  if (me_variable_get('me_rewrite_link') && !_me_handle_path($link['#href'])) {
+  if (isset($link['#href']) && me_variable_get('me_rewrite_link') && !_me_handle_path($link['#href'])) {
     $path_parts = explode('/', $link['#href'], MENU_MAX_PARTS);
 
     // The wildcarded path will either be in $link['path'], or $link['router_path'].
