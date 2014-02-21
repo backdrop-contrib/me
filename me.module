@@ -708,6 +708,18 @@ function me_user_view($account, $view_mode) {
   }
 }
 
+/**
+ * Implements hook_ctools_plugin_directory().
+ */
+function me_ctools_plugin_directory($module, $plugin) {
+  if ($module == 'ctools') {
+    return 'plugins/' . $plugin;
+  }
+}
+
+/**
+ * Implements hook_views_api().
+ */
 function me_views_api() {
   return array(
     'api' => 3,
