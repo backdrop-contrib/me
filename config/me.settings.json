@@ -1,0 +1,12 @@
+{
+    "_config_name": "me.settings",
+    "alias": "me",
+    "case_insensitive": false,
+    "redirect": false,
+    "path_rule": 0,
+    "paths": "",
+    "redirect_anonymous": "",
+    "me_theme_menu_item_link": "",
+    "rewrite_link": true,
+    "user_override": false
+}

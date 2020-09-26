@@ -7,27 +7,6 @@
  */
 
 /**
- * Implements hook_uninstall().
- */
-function me_uninstall() {
-  $vars = array(
-    'me_alias',
-    'me_case_insensitive',
-    'me_redirect',
-    'me_path_rule',
-    'me_paths',
-    'me_redirect_anonymous',
-    'me_theme_menu_item_link',
-    'me_rewrite_link',
-    'me_user_override',
-  );
-
-  foreach ($vars as $var) {
-    variable_del($var);
-  }
-}
-
-/**
  * Implements hook_install().
  */
 function me_install() {
@@ -39,16 +18,48 @@ function me_install() {
   ->execute();
 }
 
-/**
- * Rebuild menu registry.
- */
-function me_update_7001() {
-  menu_rebuild();
-}
 
 /**
- * Rebuild menu registry for URL parameters change
+ * Implements hook_update_last_removed().
  */
-function me_update_7100() {
-  menu_rebuild();
+function me_update_last_removed() {
+  return 7100;
+}
+
+
+/**
+ * Implements hook_update_N().
+ */
+function me_update_1000() {
+  $config = config('me.settings');
+
+  $config->set('alias',
+    update_variable_get('me_alias', 'me'));
+  $config->set('case_insensitive',
+    update_variable_get('me_case_insensitive', FALSE));
+  $config->set('redirect',
+    update_variable_get('me_redirect', FALSE));
+  $config->set('path_rule',
+    update_variable_get('me_path_rule', 0));
+  $config->set('paths',
+    update_variable_get('me_paths', ''));
+  $config->set('redirect_anonymous',
+    update_variable_get('me_redirect_anonymous', ''));
+  $config->set('me_theme_menu_item_link',
+    update_variable_get('me_theme_menu_item_link', TRUE));
+  $config->set('rewrite_link',
+    update_variable_get('me_rewrite_link', TRUE));
+  $config->set('user_override',
+    update_variable_get('me_user_override', FALSE));
+  $config->save();
+
+  update_variable_del('me_alias');
+  update_variable_del('me_case_insensitive');
+  update_variable_del('me_redirect');
+  update_variable_del('me_path_rule');
+  update_variable_del('me_paths');
+  update_variable_del('me_redirect_anonymous');
+  update_variable_del('me_theme_menu_item_link');
+  update_variable_del('me_rewrite_link');
+  update_variable_del('me_user_override');
 }

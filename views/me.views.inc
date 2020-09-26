@@ -3,11 +3,11 @@
 /**
  * @file
  *
- * Provides views intergration for the me module.
+ * Provides views integration for the me module.
  */
 
 /**
- * Implementation of hook_views_plugins
+ * Implements hook_views_plugins().
  */
 function me_views_plugins() {
   // Generate our plugin data.
@@ -22,7 +22,7 @@ function me_views_plugins() {
 }
 
 /**
- * Implementation of Views' hook_views_pre_execute().
+ * Implements hook_views_pre_execute().
  *
  * See http://drupal.org/project/views for module and hook information.
  */
@@ -34,19 +34,21 @@ function me_views_pre_execute($view, $do_redirect = FALSE) {
     $redirect = $do_redirect;
   }
   elseif (!empty($redirect)) {
-    // We should always be able to redirect here regardless, as our handler has to
-    // have run for our option to be set, which means we need to redirect anyway.
+    // We should always be able to redirect here regardless, as our handler has
+    // to have run for our option to be set, which means we need to redirect
+    // anyway.
 
-    // Loop over the argument handlers to get the arguments we need. We also keep this
-    // consistent with any extra arguments that may have been passed in.
+    // Loop over the argument handlers to get the arguments we need. We also
+    // keep this consistent with any extra arguments that may have been passed
+    // in.
     $arguments = $view->args;
     foreach (array_values($view->argument) as $key => $argument) {
-      if (isset($argument->argument))  {
+      if (isset($argument->argument)) {
         $arguments[$key] = $argument->argument;
       }
     }
 
     // Redirect to the path.
-    drupal_goto($view->get_url($arguments));
+    backdrop_goto($view->get_url($arguments));
   }
 }

@@ -1,8 +1,7 @@
 <?php
-
 /**
  * @file
- * 
+ *
  * Plugin to provide an argument handler for user uid *and* "me"
  */
 
@@ -18,7 +17,7 @@ $plugin = array(
   'context' => 'me_me_uid_context',
   'placeholder form' => array(
     '#type' => 'textfield',
-    '#description' =>  t('Enter the user ID of a user for this argument or the %me alias.', array('%me' => _me_get_me_alias(TRUE))),
+    '#description' => t('Enter the user ID of a user for this argument or the %me alias.', array('%me' => _me_get_me_alias(TRUE))),
   ),
   // 'default' => array('to_arg' => TRUE),
   // 'path placeholder' => '%user', // This is in pagemanager.
