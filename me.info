@@ -1,7 +1,9 @@
-type = module
 name = Me Aliases
-description = Provides links to current user's pages using 'me' instead of the numerical user id.
-package = "User Interface"
-version = "1.x-1.5"
+description = Provides links to current user’s pages using “me” instead of the numerical user id.
+package = User Interface
+tags[] = URL Handling
+version = 1.x-1.5.0-alpha1
+type = module
 backdrop = 1.x
+
 configure = admin/config/urls/me

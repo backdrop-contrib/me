@@ -271,7 +271,8 @@ function me_menu_alter(&$callbacks) {
         // in the place we expect it to be.
         if (FALSE !== ($map_index = array_search('%map', $data['load arguments']))) {
           unset($data['load arguments'][$map_index]);
-          array_unshift($data['load arguments'], '%map', '%index', strval($map_index));
+          array_unshift($data['load arguments'], '%map', '%index',
+            strval($map_index));
         }
       }
 
@@ -407,7 +408,8 @@ function me_uid_optional_load($uid, $map = NULL, $index = NULL, $map_index = FAL
  */
 function me_category_load($uid, $map = NULL, $index = NULL, $map_index = FALSE) {
   $args = func_get_args();
-  return _me_load_arguments($uid, $map, $index, $map_index, $args, 'user_category_load');
+  return _me_load_arguments($uid, $map, $index, $map_index, $args,
+    'user_category_load');
 }
 
 
