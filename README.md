@@ -22,14 +22,12 @@ Installation
 Documentation
 -------------
 
-Additional documentation is located in the Wiki:
-https://github.com/backdrop-contrib/me/wiki/Documentation.
+Additional documentation is located in the [Wiki](https://github.com/backdrop-contrib/me/wiki/Documentation).
 
 Issues
 ------
 
-Bugs and Feature requests should be reported in the Issue Queue:
-https://github.com/backdrop-contrib/me/issues.
+Bugs and feature requests should be reported in the [Issue Queue](https://github.com/backdrop-contrib/me/issues).
 
 Current Maintainers
 -------------------
