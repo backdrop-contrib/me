@@ -86,6 +86,7 @@ function me_config_info() {
     'label' => t('Me Aliases settings'),
     'group' => t('Configuration'),
   );
+  return $prefixes;
 }
 
 
