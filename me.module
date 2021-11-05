@@ -183,6 +183,20 @@ function me_handler($parts, $callback) {
       if ($GLOBALS['user']->uid == 0 && !empty($redirect_path)) {
         $path = $redirect_path;
       }
+      // While most user pages of the form user/me/... get sent to the login
+      // page before ever getting to this point,  some pages (e.g., CiviCRM
+      // Profile pages) do get to here, and calling them with a uid of 0 creates
+      // badness. So, if we found a me alias in the path but the user is
+      // anonymous, go to the login page, setting the originally requested path
+      // as the desired destination.
+      if (!$GLOBALS['user']->uid) {
+        // Use the same message that we use for general 403 errors.
+        $message = variable_get('ousa_403_default_msg', '');
+        drupal_set_message(filter_xss_admin($message), 'warning');
+        drupal_goto('user/login',
+          array('query' => array('destination' => $_GET['q'])));
+        return;
+      }
       backdrop_goto($path);
     }
   }
@@ -550,7 +564,7 @@ function me_menu() {
   $items = array();
 
   $items['admin/config/urls/me'] = array(
-    'title' => "Me Aliases",
+    'title' => "Me aliases",
     'description' => "Configure the 'me' aliases, and how they're matched.",
     'page callback' => 'backdrop_get_form',
     'page arguments' => array('me_admin_settings_form'),
