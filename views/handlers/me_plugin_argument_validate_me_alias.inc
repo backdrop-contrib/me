@@ -102,8 +102,7 @@ class me_plugin_argument_validate_me_alias extends views_plugin_argument_validat
       // The alias could potentially show up more than once. Loop over each
       // argument and check to be sure.
       foreach ($uid_args as $key => $uid_arg) {
-        $uid_args[$key] = _me_check_arg($uid_arg,
-          $this->options['type'] == 'name', FALSE);
+        $uid_args[$key] = _me_check_arg($uid_arg, $this->options['type'] == 'name', FALSE);
         //Make sure we only allow access to the current user
         if (is_numeric($uid_args[$key])) {
           if ($uid_args[$key] != $GLOBALS['user']->uid) {
