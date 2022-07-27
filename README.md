@@ -19,11 +19,6 @@ Installation
   URL Handling > Me Aliases (admin/config/urls/me) and enter the required
   information.
 
-Documentation
--------------
-
-Additional documentation is located in the [Wiki](https://github.com/backdrop-contrib/me/wiki/Documentation).
-
 Issues
 ------
 
