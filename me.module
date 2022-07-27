@@ -339,6 +339,10 @@ function me_menu_alter(&$callbacks) {
       // why it's needed. If it's not here, then these menu items end up in the
       // Backdrop admin bar, where they're superfluous. So we remove the menu
       // name and then all seems to work fine.
+      //
+      // The reason is explained in core function user_menu(). See explanation
+      // in $items['user/%user']. Unfortunately, unassigning the items here has
+      // the side effect of putting them into the User menu.
       if (isset($data['menu_name']) && $data['menu_name'] == 'management') {
         unset($data['menu_name']);
       }
@@ -435,7 +439,15 @@ function me_to_arg($arg, $map, $index) {
   if ($arg == 'me') {
     $uid = $GLOBALS['user']->uid;
   }
+  elseif (count($map) >= 2 && $map[0] == 'user' && $map[1] == '%') {
+    // Special handling for user/% and user/%/* paths. This handles user links
+    // that appear in the user menu (for example).
+    $uid = $GLOBALS['user']->uid;
+  }
   elseif ($arg == '%') {
+    // Note that if the request page is, for example, a node page at node/*,
+    // then the index in $original_map will be the node index, not the proper
+    // user index (hence the preceding special case).
     $original_map = arg(NULL, $_GET['q']);
     if (isset($original_map[$index]) && is_numeric($original_map[$index]) &&
       user_load($original_map[$index])) {
@@ -487,8 +499,7 @@ function me_category_to_arg($arg, $map, $index) {
  *   if no match.
  */
 function _me_check_arg($arg, $username = FALSE, $redirect = TRUE) {
-  $return = _me_is_alias($arg) ?
-    $username ? $GLOBALS['user']->name : $GLOBALS['user']->uid : $arg;
+  $return = _me_is_alias($arg) ? ($username ? $GLOBALS['user']->name : $GLOBALS['user']->uid) : $arg;
   $redirect_path = config_get('me.settings', 'redirect_anonymous');
 
   if ($redirect && $GLOBALS['user']->uid == 0 && !empty($redirect_path)) {
