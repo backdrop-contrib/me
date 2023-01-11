@@ -32,8 +32,10 @@ class me_plugin_argument_validate_me_alias extends views_plugin_argument_validat
   function options_form(&$form, &$form_state) {
     parent::options_form($form, $form_state);
 
-    $form['roles']['#dependency'] = array(
-      'edit-options-validate-options-me-restrict-roles' => array(1),
+    $form['roles']['#states'] = array(
+      'visible' => array(
+        ':input[name="options[validate][options][me][restrict_roles]"]' => array('checked' => TRUE),
+      ),
     );
 
     $form['redirect'] = array(
