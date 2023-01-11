@@ -25,7 +25,6 @@ $plugin = array(
   // 'no ui' => TRUE,
 );
 
-
 /**
  * Discover if this argument gives us the user we crave.
  */

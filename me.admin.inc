@@ -5,7 +5,6 @@
  * Administrative page for the Me Aliases module.
  */
 
-
 /**
  * Form callback for the admin settings form.
  */
@@ -107,7 +106,6 @@ function me_admin_settings_form($form, &$form_state) {
 
   return $form;
 }
-
 
 /**
  * Validation callback for me_admin_settings_form.

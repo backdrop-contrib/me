@@ -18,14 +18,12 @@ function me_install() {
   ->execute();
 }
 
-
 /**
  * Implements hook_update_last_removed().
  */
 function me_update_last_removed() {
   return 7100;
 }
-
 
 /**
  * Convert Drupal variables to Backdrop config.
