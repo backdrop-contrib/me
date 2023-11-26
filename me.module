@@ -184,10 +184,8 @@ function me_handler($parts, $callback) {
       // anonymous, go to the login page, setting the originally requested path
       // as the desired destination.
       if (!$GLOBALS['user']->uid) {
-        // Use the same message that we use for general 403 errors.
-        $message = variable_get('ousa_403_default_msg', '');
-        drupal_set_message(filter_xss_admin($message), 'warning');
-        drupal_goto('user/login',
+        backdrop_set_message(t('Sorry, that page is not available. Please login.'), 'warning');
+        backdrop_goto('user/login',
           array('query' => array('destination' => $_GET['q'])));
         return;
       }
