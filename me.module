@@ -424,18 +424,11 @@ function me_to_arg($arg, $map, $index) {
   if ($arg == 'me') {
     $uid = $GLOBALS['user']->uid;
   }
-  elseif (count($map) >= 2 && $map[0] == 'user' && $map[1] == '%') {
+  elseif ((count($map) >= 2 && $map[0] == 'user' && $map[1] == '%') || $arg == '%') {
     // Special handling for user/% and user/%/* paths. This handles user links
     // that appear in the user menu (for example).
-    $uid = $GLOBALS['user']->uid;
-  }
-  elseif ($arg == '%') {
-    // Note that if the request page is, for example, a node page at node/*,
-    // then the index in $original_map will be the node index, not the proper
-    // user index (hence the preceding special case).
     $original_map = arg(NULL, $_GET['q']);
-    if (isset($original_map[$index]) && is_numeric($original_map[$index]) &&
-      user_load($original_map[$index])) {
+    if (isset($original_map[$index]) && is_numeric($original_map[$index]) && user_load($original_map[$index])) {
       $uid = $original_map[$index];
     }
     else {
